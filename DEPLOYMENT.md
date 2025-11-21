@@ -1,102 +1,211 @@
 # Deployment Guide
 
-Complete guide for deploying Philly Bike Train to GitHub and Railway.
+Complete guide for deploying Philly Bike Train to Railway.
 
----
-
-## Part 1: Push to GitHub
-
-### Step 1: Create GitHub Repository
-
-1. Go to [github.com/new](https://github.com/new)
-2. Repository name: `philly-bike-train` (or your preferred name)
-3. Description: `Real-time bike train tracking app for Philadelphia`
-4. Keep it **Public** or **Private** (your choice)
-5. **Do NOT** initialize with README, .gitignore, or license (we already have these)
-6. Click **Create repository**
-
-### Step 2: Push Your Code
-
-After creating the repository, GitHub will show you the commands. Use these:
-
-```bash
-cd C:\dev2\PBT
-
-# Add your GitHub repository as remote
-git remote add origin https://github.com/YOUR_USERNAME/philly-bike-train.git
-
-# Push your code
-git branch -M main
-git push -u origin main
-```
-
-Replace `YOUR_USERNAME` with your actual GitHub username.
-
----
-
-## Part 2: Deploy to Railway
-
-### Prerequisites
-
-- GitHub repository created and pushed (Part 1 above)
+**Prerequisites:**
+- ✅ GitHub repository: [phillybiketrain/Tracker-2](https://github.com/phillybiketrain/Tracker-2)
 - Railway account: [railway.app](https://railway.app)
 
-### Step 1: Create New Railway Project
+---
 
-1. Log in to [railway.app](https://railway.app)
-2. Click **New Project**
-3. Select **Deploy from GitHub repo**
-4. Choose your `philly-bike-train` repository
-5. Railway will detect it as a Node.js project
+## Deploy to Railway (3 Services in 1 Project)
 
-### Step 2: Add PostgreSQL Database
+Railway project will contain:
+1. **Backend API** (Node.js + Socket.io)
+2. **Frontend App** (SvelteKit)
+3. **PostgreSQL Database**
 
-1. In your Railway project, click **New Service**
-2. Select **Database** → **PostgreSQL**
-3. Railway will provision a PostgreSQL database automatically
-4. Copy the `DATABASE_URL` from the PostgreSQL service variables
+---
 
-### Step 3: Configure Backend Environment Variables
+## Step 1: Create Railway Project & Deploy Backend
 
-In your Railway project, go to your main app service and add these variables:
+### 1.1 Create Project from GitHub
 
-```
-DATABASE_URL=[automatically set by Railway when you link PostgreSQL]
-NODE_ENV=production
-PORT=3001
-PUBLIC_APP_URL=https://your-app-name.up.railway.app
-```
+1. Go to [railway.app/new](https://railway.app/new)
+2. Click **Deploy from GitHub repo**
+3. Select **phillybiketrain/Tracker-2**
+4. Railway detects it as Node.js and deploys the backend automatically
 
-**Important**: After adding PostgreSQL service, click on your main app service → **Variables** → **Link** PostgreSQL database. Railway will auto-populate `DATABASE_URL`.
+### 1.2 Add PostgreSQL Database
 
-### Step 4: Set Up Database Schema
+1. In your Railway project dashboard, click **+ New**
+2. Select **Database** → **Add PostgreSQL**
+3. PostgreSQL provisions automatically
 
-Railway doesn't run setup scripts automatically, so you'll need to initialize the database:
+### 1.3 Configure Backend Service
 
-**Option A: Using Railway CLI** (Recommended)
+Click on your backend service, then go to **Variables**:
+
+1. Click **+ New Variable** and add:
+   ```
+   NODE_ENV=production
+   ```
+
+2. Click **+ Reference** → Select **PostgreSQL** → Add `DATABASE_URL`
+   - This links the database automatically
+
+3. Add frontend URL (we'll update this after deploying frontend):
+   ```
+   PUBLIC_APP_URL=https://your-frontend-service.up.railway.app
+   ```
+   (Placeholder for now - update after Step 2)
+
+4. Click **Settings** → Under **Networking**, click **Generate Domain**
+   - Copy this URL (e.g., `https://backend-abc123.up.railway.app`)
+   - You'll need it for the frontend
+
+### 1.4 Initialize Database Schema
+
+Install Railway CLI and run migrations:
 
 ```bash
 # Install Railway CLI
 npm i -g @railway/cli
 
-# Login
+# Login to Railway
 railway login
 
-# Link to your project
+# Link to your backend service
 railway link
 
-# Run database setup
-railway run npm run db:setup
+# Select your project and backend service when prompted
+
+# Run migrations
 railway run npm run db:migrate
 ```
 
-**Option B: Using psql directly**
+**Verification:** Visit `https://your-backend-url.up.railway.app/api/health` - should return `{"status":"ok"}`
 
-1. Copy the `DATABASE_URL` from Railway PostgreSQL service
-2. Install PostgreSQL locally if you haven't
-3. Run:
-```bash
-psql "YOUR_DATABASE_URL" -f server/db/schema.sql
+---
+
+## Step 2: Deploy Frontend Service
+
+### 2.1 Add Frontend Service
+
+1. In Railway project dashboard, click **+ New**
+2. Select **GitHub Repo** → Choose **phillybiketrain/Tracker-2** again
+3. Railway will ask what to deploy - click **Add Service**
+
+### 2.2 Configure Frontend Root Directory
+
+1. Click on the new service → **Settings**
+2. Under **Build**, set **Root Directory**: `app`
+3. Under **Deploy**, Railway will use `app/railway.json` config automatically
+
+### 2.3 Add Frontend Environment Variables
+
+Click **Variables** tab and add:
+
+1. **PUBLIC_MAPBOX_TOKEN**
+   ```
+   pk.YOUR_MAPBOX_TOKEN_HERE
+   ```
+   Get token from: https://account.mapbox.com/access-tokens/
+
+2. **PUBLIC_API_URL** (backend URL from Step 1.4)
+   ```
+   https://backend-abc123.up.railway.app
+   ```
+
+3. Click **Settings** → **Networking** → **Generate Domain**
+   - This is your frontend URL (e.g., `https://frontend-xyz789.up.railway.app`)
+
+### 2.4 Update Backend CORS
+
+Go back to **backend service** → **Variables**:
+
+Update `PUBLIC_APP_URL` to match your frontend URL:
+```
+PUBLIC_APP_URL=https://frontend-xyz789.up.railway.app
+```
+
+Click **Redeploy** on the backend service after updating.
+
+---
+
+## Step 3: Update Frontend API Calls
+
+Your frontend needs to know where the backend is. Update the API URL:
+
+### Option A: Environment Variable (Recommended)
+
+The `PUBLIC_API_URL` variable you set in Step 2.3 will be used automatically if your frontend code reads from `import.meta.env.PUBLIC_API_URL`.
+
+### Option B: Hardcode (Quick Fix)
+
+If fetch calls use `http://localhost:3001`, update them to use the Railway backend URL:
+
+```javascript
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
+```
+
+Update in:
+- [app/src/routes/lead/+page.svelte](app/src/routes/lead/+page.svelte) (lines 76, 98)
+- [app/src/routes/browse/+page.svelte](app/src/routes/browse/+page.svelte)
+- [app/src/routes/ride/[id]/+page.svelte](app/src/routes/ride/[id]/+page.svelte)
+- [app/src/routes/follow/+page.svelte](app/src/routes/follow/+page.svelte)
+
+---
+
+## Step 4: Verify Deployment
+
+### Backend Health Check
+Visit: `https://your-backend.up.railway.app/api/health`
+
+Expected response:
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-15T12:00:00.000Z",
+  "uptime": 123.456
+}
+```
+
+### Frontend Home Page
+Visit: `https://your-frontend.up.railway.app`
+
+Should see:
+- Home page with "Browse Rides" and "Lead a Ride" cards
+- Warm cream background
+- Space Grotesk font
+
+### Database Connection
+Check Railway dashboard:
+- PostgreSQL service shows **Active**
+- Backend logs show no database errors
+
+### Create Test Route
+1. Go to `/lead` on your frontend
+2. Click map to add waypoints
+3. Fill in route details
+4. Should receive 4-letter access code
+
+If this works, your entire stack is deployed successfully!
+
+---
+
+## Railway Project Structure
+
+```
+Railway Project: Philly Bike Train
+│
+├── Service 1: Backend (phillybiketrain/Tracker-2)
+│   ├── Root Directory: / (project root)
+│   ├── Start Command: npm run start
+│   └── Environment:
+│       ├── DATABASE_URL (linked from PostgreSQL)
+│       ├── NODE_ENV=production
+│       └── PUBLIC_APP_URL=https://frontend-xyz.up.railway.app
+│
+├── Service 2: Frontend (phillybiketrain/Tracker-2)
+│   ├── Root Directory: app
+│   ├── Start Command: PORT=$PORT npm run preview -- --host 0.0.0.0
+│   └── Environment:
+│       ├── PUBLIC_MAPBOX_TOKEN=pk.your_token
+│       └── PUBLIC_API_URL=https://backend-abc.up.railway.app
+│
+└── Service 3: PostgreSQL
+    └── Automatically configured by Railway
 ```
 
 ### Step 5: Deploy Frontend (SvelteKit App)
