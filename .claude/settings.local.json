@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(psql:*)",
+      "Bash(git --version:*)",
+      "Bash(where:*)",
+      "Bash(where git:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(cmd /c \"node -v && npm -v && psql --version\")",
+      "Bash(mkdir:*)",
+      "Bash(npm install)",
+      "Bash(cmd /c \"npm install\")",
+      "Bash(npm init:*)",
+      "Bash(findstr:*)",
+      "Bash(if exist node_modules.vite rmdir /s /q node_modules.vite)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

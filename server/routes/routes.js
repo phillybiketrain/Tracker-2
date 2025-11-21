@@ -1,0 +1,227 @@
+/**
+ * Routes API
+ * Handles creating routes and scheduling ride instances
+ */
+
+import express from 'express';
+import { query, queryOne, queryAll } from '../db/client.js';
+import { z } from 'zod';
+
+const router = express.Router();
+
+// Validation schemas
+const CreateRouteSchema = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+  waypoints: z.array(z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+    address: z.string().optional()
+  })).min(2),
+  departure_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
+  estimated_duration: z.string().optional(),
+  creator_email: z.string().email().optional()
+});
+
+const ScheduleRideSchema = z.object({
+  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1)
+});
+
+/**
+ * POST /api/routes
+ * Create a new route
+ */
+router.post('/', async (req, res) => {
+  try {
+    // Validate input
+    const data = CreateRouteSchema.parse(req.body);
+
+    // Generate 4-letter access code
+    const accessCode = await queryOne(
+      'SELECT generate_access_code() as code'
+    );
+
+    // Create route
+    const route = await queryOne(`
+      INSERT INTO routes (
+        access_code, name, description, waypoints,
+        departure_time, estimated_duration, creator_email,
+        status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [
+      accessCode.code,
+      data.name,
+      data.description || null,
+      JSON.stringify(data.waypoints), // JSONB accepts string
+      data.departure_time,
+      data.estimated_duration || null,
+      data.creator_email || null,
+      'approved' // Auto-approve for MVP (TODO: require admin approval)
+    ]);
+
+    console.log(`✅ Route created: ${route.name} (${route.access_code})`);
+
+    res.status(201).json({
+      success: true,
+      data: route // waypoints already parsed by pg driver
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: 'Validation error',
+        details: error.errors
+      });
+    }
+
+    console.error('Error creating route:', error);
+    res.status(500).json({
+      error: 'Failed to create route',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/routes/:accessCode
+ * Get route by access code
+ */
+router.get('/:accessCode', async (req, res) => {
+  try {
+    const { accessCode } = req.params;
+
+    const route = await queryOne(`
+      SELECT * FROM routes
+      WHERE access_code = $1
+    `, [accessCode.toUpperCase()]);
+
+    if (!route) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: route // waypoints already parsed
+    });
+
+  } catch (error) {
+    console.error('Error fetching route:', error);
+    res.status(500).json({
+      error: 'Failed to fetch route',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/routes/:accessCode/schedule
+ * Schedule ride instances for specific dates
+ */
+router.post('/:accessCode/schedule', async (req, res) => {
+  try {
+    const { accessCode } = req.params;
+
+    // Validate input
+    const { dates } = ScheduleRideSchema.parse(req.body);
+
+    // Get route
+    const route = await queryOne(`
+      SELECT * FROM routes
+      WHERE access_code = $1
+    `, [accessCode.toUpperCase()]);
+
+    if (!route) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    // Create ride instances for each date
+    const instances = [];
+
+    for (const date of dates) {
+      // Check if instance already exists
+      const existing = await queryOne(`
+        SELECT id FROM ride_instances
+        WHERE route_id = $1 AND date = $2
+      `, [route.id, date]);
+
+      if (existing) {
+        continue; // Skip if already scheduled
+      }
+
+      // Create instance
+      const instance = await queryOne(`
+        INSERT INTO ride_instances (
+          route_id, date, status
+        )
+        VALUES ($1, $2, 'scheduled')
+        RETURNING *
+      `, [route.id, date]);
+
+      instances.push(instance);
+    }
+
+    console.log(`✅ Scheduled ${instances.length} ride(s) for ${route.name}`);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        route: route, // waypoints already parsed
+        instances
+      }
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: 'Validation error',
+        details: error.errors
+      });
+    }
+
+    console.error('Error scheduling rides:', error);
+    res.status(500).json({
+      error: 'Failed to schedule rides',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/routes
+ * List all approved routes
+ */
+router.get('/', async (req, res) => {
+  try {
+    const routes = await queryAll(`
+      SELECT
+        r.*,
+        COUNT(DISTINCT ri.id) as scheduled_rides_count
+      FROM routes r
+      LEFT JOIN ride_instances ri ON r.id = ri.route_id AND ri.date >= CURRENT_DATE
+      WHERE r.status = 'approved'
+      GROUP BY r.id
+      ORDER BY r.created_at DESC
+      LIMIT 50
+    `);
+
+    res.json({
+      success: true,
+      data: routes // waypoints already parsed
+    });
+
+  } catch (error) {
+    console.error('Error listing routes:', error);
+    res.status(500).json({
+      error: 'Failed to list routes',
+      message: error.message
+    });
+  }
+});
+
+export default router;
