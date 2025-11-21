@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import mapboxgl from 'mapbox-gl';
+  import { MAPBOX_TOKEN } from '$lib/config.js';
 
   export let center = [-75.1652, 39.9526]; // Philadelphia
   export let zoom = 12;
@@ -14,9 +15,6 @@
   let map;
   let markers = [];
   let routeLine = null;
-
-  // Get Mapbox token from environment variable
-  const MAPBOX_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
   onMount(() => {
     if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'pk.YOUR_MAPBOX_TOKEN_HERE') {

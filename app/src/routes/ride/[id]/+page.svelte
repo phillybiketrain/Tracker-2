@@ -3,6 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Map from '$lib/components/Map.svelte';
   import { io } from 'socket.io-client';
+  import { API_URL } from '$lib/config.js';
 
   let ride = null;
   let loading = true;
@@ -23,7 +24,7 @@
     loading = true;
 
     try {
-      const res = await fetch(`http://localhost:3001/api/rides/${rideId}`);
+      const res = await fetch(`${API_URL}/api/rides/${rideId}`);
       const data = await res.json();
 
       if (data.success) {
@@ -46,7 +47,7 @@
     tracking = true;
 
     // Connect to WebSocket
-    socket = io('http://localhost:3001');
+    socket = io(API_URL);
 
     socket.on('connect', () => {
       console.log('Connected to server');
@@ -116,7 +117,7 @@
         localStorage.setItem('session_id', sessionId);
       }
 
-      const res = await fetch(`http://localhost:3001/api/rides/${rideId}/interest`, {
+      const res = await fetch(`${API_URL}/api/rides/${rideId}/interest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId })

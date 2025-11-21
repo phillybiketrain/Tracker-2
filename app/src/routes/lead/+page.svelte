@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Map from '$lib/components/Map.svelte';
   import { io } from 'socket.io-client';
+  import { API_URL } from '$lib/config.js';
 
   let step = 'draw'; // draw | details | schedule | broadcasting | success
   let waypoints = [];
@@ -73,7 +74,7 @@
   async function createRoute() {
     try {
       // Create route
-      const routeRes = await fetch('http://localhost:3001/api/routes', {
+      const routeRes = await fetch(`${API_URL}/api/routes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -96,7 +97,7 @@
 
       // Schedule instances
       const scheduleRes = await fetch(
-        `http://localhost:3001/api/routes/${accessCode}/schedule`,
+        `${API_URL}/api/routes/${accessCode}/schedule`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -125,7 +126,7 @@
     }
 
     // Connect to WebSocket
-    socket = io('http://localhost:3001');
+    socket = io(API_URL);
 
     socket.on('connect', () => {
       console.log('Connected to server');

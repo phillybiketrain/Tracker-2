@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { API_URL } from '$lib/config.js';
 
   let rides = [];
   let loading = true;
@@ -26,7 +27,7 @@
       const fromStr = fromDate.toISOString().split('T')[0];
 
       const res = await fetch(
-        `http://localhost:3001/api/rides?from_date=${fromStr}&days=${days}&limit=50`
+        `${API_URL}/api/rides?from_date=${fromStr}&days=${days}&limit=50`
       );
 
       const data = await res.json();
@@ -53,7 +54,7 @@
       }
 
       const res = await fetch(
-        `http://localhost:3001/api/rides/${rideId}/interest`,
+        `${API_URL}/api/rides/${rideId}/interest`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

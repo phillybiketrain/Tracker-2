@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Map from '$lib/components/Map.svelte';
   import { io } from 'socket.io-client';
+  import { API_URL } from '$lib/config.js';
 
   let accessCode = '';
   let inputCode = '';
@@ -30,7 +31,7 @@
     try {
       // Get today's ride for this access code
       const res = await fetch(
-        `http://localhost:3001/api/rides/by-code/${accessCode}`
+        `${API_URL}/api/rides/by-code/${accessCode}`
       );
 
       const data = await res.json();
@@ -46,7 +47,7 @@
       }
 
       // Connect to WebSocket
-      socket = io('http://localhost:3001');
+      socket = io(API_URL);
 
       socket.on('connect', () => {
         console.log('Connected to server');
