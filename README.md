@@ -2,139 +2,212 @@
 
 Fixed-route bike transit for Philadelphia. Clean, fast, mobile-first.
 
-## 🚀 Quick Start
+Professional civic transit app with Headspace-inspired design: warm colors, straightforward navigation, information-dense control panel interface.
 
-### Step 1: Install Dependencies
+## Quick Start
+
+### 1. Install Dependencies
 
 ```bash
 npm install
+cd app && npm install && cd ..
 ```
 
-This will install:
-- Express (REST API server)
-- Socket.io (Real-time GPS broadcasting)
-- PostgreSQL client (Database connection)
-- And other dependencies...
+### 2. Configure Environment Variables
 
-### Step 2: Set Up Database
+**Backend** - Edit `C:\dev2\PBT\.env`:
+```bash
+DATABASE_URL=postgresql://postgres:Frankie0620!@localhost:5432/bike_train
+PORT=3001
+NODE_ENV=development
+PUBLIC_APP_URL=http://localhost:5173
+```
+
+**Frontend** - Edit `C:\dev2\PBT\app\.env`:
+```bash
+PUBLIC_MAPBOX_TOKEN=pk.YOUR_MAPBOX_TOKEN_HERE
+```
+
+Get your free Mapbox token: https://account.mapbox.com/access-tokens/ (see [MAPBOX_SETUP.md](MAPBOX_SETUP.md))
+
+### 3. Set Up Database
 
 ```bash
-npm run db:setup
+npm run db:setup    # Creates bike_train database + PostGIS
+npm run db:migrate  # Creates tables
 ```
 
-This creates the `bike_train` database and enables PostGIS.
-
-### Step 3: Run Migrations
-
-```bash
-npm run db:migrate
-```
-
-This creates all the tables (routes, ride_instances, followers, etc).
-
-### Step 4: Start Development Server
+### 4. Start Development
 
 ```bash
 npm run dev
 ```
 
-This starts:
-- Backend API on http://localhost:3001
-- Frontend app on http://localhost:5173 (when we build it)
+Opens:
+- Backend API: http://localhost:3001
+- Frontend app: http://localhost:5173
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 PBT/
-├── server/              # Backend (Express + Socket.io)
-│   ├── db/             # Database setup and queries
-│   ├── routes/         # API endpoints (will create)
-│   └── websocket/      # Real-time GPS (will create)
+├── server/                    # Backend (Express + Socket.io)
+│   ├── db/
+│   │   ├── schema.sql        # Database schema
+│   │   ├── setup.js          # Database creation
+│   │   └── migrate.js        # Table creation
+│   ├── routes/
+│   │   ├── routes.js         # Route creation API
+│   │   ├── rides.js          # Ride instance API
+│   │   └── admin.js          # Admin endpoints
+│   └── index.js              # Server + WebSocket
 │
-├── app/                # Frontend (SvelteKit) (will create)
+├── app/                       # Frontend (SvelteKit)
 │   └── src/
-│       ├── routes/     # Pages
-│       └── lib/        # Components & utilities
+│       ├── routes/
+│       │   ├── +page.svelte           # Home
+│       │   ├── +layout.svelte         # Global layout + navbar
+│       │   ├── browse/+page.svelte    # Browse rides
+│       │   ├── lead/+page.svelte      # Create route + broadcast
+│       │   ├── follow/+page.svelte    # Leader access code entry
+│       │   └── ride/[id]/+page.svelte # Follower tracking
+│       ├── lib/
+│       │   └── components/
+│       │       └── Map.svelte         # Mapbox GL map
+│       ├── app.css                    # Global styles
+│       └── app.html
+│   └── tailwind.config.js             # Design system
 │
-├── .env                # Environment variables (local)
-├── .env.example        # Template for .env
-└── package.json        # Dependencies and scripts
+├── .env                       # Backend environment variables
+├── DEPLOYMENT.md              # GitHub + Railway deployment guide
+├── MAPBOX_SETUP.md            # Mapbox token setup
+└── package.json
 ```
 
 ---
 
-## 🗺️ What We're Building
+## Core Flow
 
-### Core Flow:
-1. **Create Route**: Draw path on map → Get 4-letter access code (e.g., "XMKP")
-2. **Lead Ride**: Broadcast GPS on scheduled date
-3. **Follow Ride**: Enter code → Track leader in real-time
+### For Leaders (Route Creators):
+1. Visit `/lead` → Draw route on map
+2. Add route details (name, departure time, duration)
+3. Schedule dates for the ride
+4. Get 4-letter access code (e.g., "XMKP")
+5. On ride day: Enter access code at `/follow` → Start broadcasting GPS
+6. Watch follower count grow in real-time
 
-### Pages:
-- `/` - Home
-- `/browse` - List upcoming rides
-- `/lead/new` - Create route
-- `/lead/:code` - Broadcast GPS
-- `/follow/:code` - Track leader
+### For Followers (Ride Trackers):
+1. Visit `/browse` → See all upcoming rides
+2. Click a ride → View details at `/ride/[id]`
+3. When ride goes live → Track leader in real-time on map
+4. No access code needed - just browse and click
 
----
-
-## 🔧 Environment Variables
-
-Edit `.env` file:
-
-```bash
-# Database (already configured for local)
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bike_train
-
-# Server
-PORT=3001
-
-# Email (add when ready for Mailgun)
-MAILGUN_API_KEY=your_key_here
-MAILGUN_DOMAIN=your_domain_here
-
-# Mapbox (add when ready for maps)
-PUBLIC_MAPBOX_TOKEN=your_token_here
-```
+**Key Design Decision**: Access codes are for leaders only. Followers browse and track rides directly without codes.
 
 ---
 
-## 📊 Database Tables
+## Design System
 
-- **routes** - Fixed paths with departure times
-- **ride_instances** - Specific dates for routes
-- **ride_followers** - Who's tracking live rides
-- **ride_interest** - Who's interested in scheduled rides
-- **email_subscribers** - Weekly digest subscribers
-- **route_suggestions** - Demand heatmap data
-- **admin_users** - Admin authentication
+Inspired by Tidal (straightforwardness) × Headspace (warm colors, rounded shapes):
+
+**Typography:**
+- Headlines: Space Grotesk with tight tracking (-0.02em)
+- Body: System fonts (-apple-system, BlinkMacSystemFont)
+
+**Colors:**
+- Primary: #FF9F66 (soft orange/peach)
+- Secondary: #6FB3B8 (muted blue-green)
+- Accent: #E8B4BC (soft pink)
+- Background: #FAF9F7 (warm cream)
+- Text: Warm grays (50-900)
+
+**Style:**
+- Information-dense "control panel" interface
+- Large glanceable stats for mobile
+- Minimal scrolling
+- No emojis - professional civic service aesthetic
+- Rounded corners (1.5rem border radius)
 
 ---
 
-## 🎯 Next Steps
+## API Endpoints
 
-After running the setup commands above, I'll build:
+**Routes:**
+- `POST /api/routes` - Create route
+- `POST /api/routes/:accessCode/schedule` - Schedule ride dates
+- `GET /api/routes/:accessCode` - Get route by access code
 
-1. ✅ Express API endpoints for routes
-2. ✅ Socket.io WebSocket for GPS
-3. ✅ SvelteKit frontend pages
-4. ✅ Mapbox integration for maps
+**Rides:**
+- `GET /api/rides` - List all rides (query: ?date, ?status)
+- `GET /api/rides/:id` - Get ride details
+- `POST /api/rides/:id/interest` - Express interest (followers)
+
+**Health:**
+- `GET /api/health` - Server status
 
 ---
 
-## 🐛 Troubleshooting
+## WebSocket Events
 
-**npm install fails:**
-- Make sure you're in `C:\dev2\PBT` directory
-- Run `npm cache clean --force` then try again
+**Leader (broadcaster):**
+- `ride:start` → `ride:started` - Start broadcasting
+- `location:update` - Send GPS coordinates
+- `ride:end` - Stop broadcasting
+- Listen: `follower:joined`, `follower:left`
+
+**Follower (tracker):**
+- `follow:start` → `follow:started` - Start tracking
+- Listen: `location:updated` - Receive leader GPS
+- `follow:stop` - Stop tracking
+
+---
+
+## Database Schema
+
+**routes** - Fixed paths with waypoints
+- `id`, `name`, `description`, `waypoints` (JSONB), `departure_time`, `estimated_duration`, `access_code` (4-letter), `region_id`
+
+**ride_instances** - Scheduled rides
+- `id`, `route_id`, `date`, `status` (scheduled/live/completed), `leader_location` (Point), `location_trail` (JSONB), `follower_count`
+
+**ride_followers** - Who's tracking live
+- `id`, `ride_instance_id`, `session_id`, `joined_at`
+
+**ride_interest** - Who's interested in scheduled rides
+- `id`, `ride_instance_id`, `session_id`, `created_at`
+
+---
+
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete GitHub + Railway deployment guide.
+
+**Quick Summary:**
+1. Push to GitHub
+2. Deploy backend to Railway (with PostgreSQL)
+3. Deploy frontend to Vercel (or Railway)
+4. Configure environment variables
+5. Run database migrations on production
+
+---
+
+## Troubleshooting
+
+**Maps not loading:**
+- Get Mapbox token: https://account.mapbox.com/access-tokens/
+- Add to `app/.env`: `PUBLIC_MAPBOX_TOKEN=pk.your_token`
+- Restart frontend: `cd app && npm run dev`
 
 **Database connection fails:**
 - Check PostgreSQL is running
-- Verify password in `.env` matches your postgres password
-- Default password is `postgres`
+- Verify password in `.env`: `Frankie0620!`
+- Run `npm run db:setup` to create database
 
 **Port already in use:**
-- Change `PORT=3001` in `.env` to another number (e.g., 3002)
+- Change `PORT=3001` in `.env` to another number
+
+**CORS errors:**
+- Ensure `PUBLIC_APP_URL` in backend `.env` matches frontend URL
+- Default: `http://localhost:5173` (no trailing slash)
