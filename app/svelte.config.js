@@ -8,8 +8,7 @@ const config = {
   kit: {
     adapter: adapter({
       out: 'build',
-      precompress: false,
-      envPrefix: 'PUBLIC_'
+      precompress: false
     }),
     alias: {
       $lib: './src/lib'
