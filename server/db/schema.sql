@@ -26,9 +26,9 @@ CREATE TABLE IF NOT EXISTS routes (
   approved_by     TEXT
 );
 
-CREATE INDEX idx_routes_access_code ON routes(access_code);
-CREATE INDEX idx_routes_status ON routes(status);
-CREATE INDEX idx_routes_region ON routes(region);
+CREATE INDEX IF NOT EXISTS idx_routes_access_code ON routes(access_code);
+CREATE INDEX IF NOT EXISTS idx_routes_status ON routes(status);
+CREATE INDEX IF NOT EXISTS idx_routes_region ON routes(region);
 
 -- ============================================
 -- RIDE_INSTANCES (Specific dates for routes)
@@ -50,9 +50,9 @@ CREATE TABLE IF NOT EXISTS ride_instances (
   UNIQUE(route_id, date)
 );
 
-CREATE INDEX idx_ride_instances_date ON ride_instances(date);
-CREATE INDEX idx_ride_instances_status ON ride_instances(status);
-CREATE INDEX idx_ride_instances_route ON ride_instances(route_id);
+CREATE INDEX IF NOT EXISTS idx_ride_instances_date ON ride_instances(date);
+CREATE INDEX IF NOT EXISTS idx_ride_instances_status ON ride_instances(status);
+CREATE INDEX IF NOT EXISTS idx_ride_instances_route ON ride_instances(route_id);
 
 -- ============================================
 -- FOLLOWERS (Who's watching a live ride)
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS ride_followers (
   PRIMARY KEY (ride_instance_id, session_id)
 );
 
-CREATE INDEX idx_followers_ride ON ride_followers(ride_instance_id);
+CREATE INDEX IF NOT EXISTS idx_followers_ride ON ride_followers(ride_instance_id);
 
 -- ============================================
 -- INTEREST (Who's interested in scheduled rides)
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS route_suggestions (
   expires_at        TIMESTAMPTZ DEFAULT NOW() + INTERVAL '90 days'
 );
 
-CREATE INDEX idx_suggestions_expires ON route_suggestions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_suggestions_expires ON route_suggestions(expires_at);
 
 -- ============================================
 -- ADMIN_USERS (Simple admin authentication)
