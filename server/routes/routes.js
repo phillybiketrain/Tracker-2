@@ -20,7 +20,9 @@ const CreateRouteSchema = z.object({
   })).min(2),
   departure_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
   estimated_duration: z.string().optional(),
-  creator_email: z.string().email().optional()
+  creator_email: z.string().email().optional(),
+  tag: z.enum(['community', 'regular', 'special']).optional(),
+  region: z.string().optional() // Region slug (defaults to 'philly')
 });
 
 const ScheduleRideSchema = z.object({
@@ -36,19 +38,32 @@ router.post('/', async (req, res) => {
     // Validate input
     const data = CreateRouteSchema.parse(req.body);
 
+    // Get region_id (default to philly)
+    const regionSlug = data.region || 'philly';
+    const region = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [regionSlug]);
+
+    if (!region) {
+      return res.status(400).json({
+        error: 'Invalid region',
+        message: `Region '${regionSlug}' does not exist`
+      });
+    }
+
     // Generate 4-letter access code
     const accessCode = await queryOne(
       'SELECT generate_access_code() as code'
     );
 
-    // Create route
+    // Create route (pending approval by default)
     const route = await queryOne(`
       INSERT INTO routes (
         access_code, name, description, waypoints,
         departure_time, estimated_duration, creator_email,
-        status
+        status, tag, region_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `, [
       accessCode.code,
@@ -58,7 +73,9 @@ router.post('/', async (req, res) => {
       data.departure_time,
       data.estimated_duration || null,
       data.creator_email || null,
-      'approved' // Auto-approve for MVP (TODO: require admin approval)
+      'pending', // Requires admin approval
+      data.tag || 'community',
+      region.id
     ]);
 
     console.log(`✅ Route created: ${route.name} (${route.access_code})`);
@@ -157,11 +174,11 @@ router.post('/:accessCode/schedule', async (req, res) => {
       // Create instance
       const instance = await queryOne(`
         INSERT INTO ride_instances (
-          route_id, date, status
+          route_id, date, status, region_id
         )
-        VALUES ($1, $2, 'scheduled')
+        VALUES ($1, $2, 'scheduled', $3)
         RETURNING *
-      `, [route.id, date]);
+      `, [route.id, date, route.region_id]);
 
       instances.push(instance);
     }
@@ -194,10 +211,24 @@ router.post('/:accessCode/schedule', async (req, res) => {
 
 /**
  * GET /api/routes
- * List all approved routes
+ * List all approved routes (optionally filtered by region)
  */
 router.get('/', async (req, res) => {
   try {
+    const { region = 'philly' } = req.query;
+
+    // Get region_id
+    const regionData = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [region]);
+
+    if (!regionData) {
+      return res.status(400).json({
+        error: 'Invalid region',
+        message: `Region '${region}' does not exist`
+      });
+    }
+
     const routes = await queryAll(`
       SELECT
         r.*,
@@ -205,10 +236,11 @@ router.get('/', async (req, res) => {
       FROM routes r
       LEFT JOIN ride_instances ri ON r.id = ri.route_id AND ri.date >= CURRENT_DATE
       WHERE r.status = 'approved'
+        AND r.region_id = $1
       GROUP BY r.id
       ORDER BY r.created_at DESC
       LIMIT 50
-    `);
+    `, [regionData.id]);
 
     res.json({
       success: true,

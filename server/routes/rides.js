@@ -11,15 +11,28 @@ const router = express.Router();
 
 /**
  * GET /api/rides
- * Browse upcoming ride instances
+ * Browse upcoming ride instances (filtered by region)
  */
 router.get('/', async (req, res) => {
   try {
     const {
       from_date = new Date().toISOString().split('T')[0],
       days = 7,
-      limit = 50
+      limit = 50,
+      region = 'philly'
     } = req.query;
+
+    // Get region_id
+    const regionData = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [region]);
+
+    if (!regionData) {
+      return res.status(400).json({
+        error: 'Invalid region',
+        message: `Region '${region}' does not exist`
+      });
+    }
 
     const rides = await queryAll(`
       SELECT
@@ -30,6 +43,7 @@ router.get('/', async (req, res) => {
         r.waypoints,
         r.departure_time,
         r.estimated_duration,
+        r.tag,
         COUNT(DISTINCT rf.session_id) as follower_count,
         COUNT(DISTINCT rint.session_id) as interest_count
       FROM ride_instances ri
@@ -40,10 +54,11 @@ router.get('/', async (req, res) => {
         AND ri.date <= $1::date + $2::integer
         AND ri.status IN ('scheduled', 'live')
         AND r.status = 'approved'
+        AND ri.region_id = $4
       GROUP BY ri.id, r.id
       ORDER BY ri.date ASC, r.departure_time ASC
       LIMIT $3
-    `, [from_date, days, limit]);
+    `, [from_date, days, limit, regionData.id]);
 
     res.json({
       success: true,

@@ -30,7 +30,10 @@
       "Bash(.gitignore)",
       "Bash(npm run build:*)",
       "Bash(cmd /c npm run build)",
-      "Bash(cmd /c \"where node\")"
+      "Bash(cmd /c \"where node\")",
+      "Bash(npm run db:migrate:*)",
+      "Bash(node db/migrate.js:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []
