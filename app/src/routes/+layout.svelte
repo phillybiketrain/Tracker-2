@@ -14,11 +14,11 @@
 
         <!-- Desktop nav -->
         <div class="hidden md:flex gap-3">
-          <a href="/browse" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Browse
-          </a>
           <a href="/lead" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Lead
+            Create
+          </a>
+          <a href="/subscribe" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Subscribe
           </a>
           <a href="/follow" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Broadcast
@@ -44,11 +44,11 @@
       <!-- Mobile menu -->
       {#if mobileMenuOpen}
         <div class="md:hidden pt-4 pb-2 space-y-2">
-          <a href="/browse" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Browse
-          </a>
           <a href="/lead" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Lead
+            Create
+          </a>
+          <a href="/subscribe" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Subscribe
           </a>
           <a href="/follow" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Broadcast

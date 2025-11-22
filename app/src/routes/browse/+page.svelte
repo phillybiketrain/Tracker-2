@@ -6,6 +6,16 @@
   let routes = []; // Grouped by route
   let loading = true;
   let filter = 'week'; // today | tomorrow | week
+  let expandedRoutes = new Set(); // Track which routes are expanded
+
+  function toggleRouteExpansion(routeId) {
+    if (expandedRoutes.has(routeId)) {
+      expandedRoutes.delete(routeId);
+    } else {
+      expandedRoutes.add(routeId);
+    }
+    expandedRoutes = expandedRoutes; // Trigger reactivity
+  }
 
   onMount(() => {
     loadRides();
@@ -210,20 +220,59 @@
             </div>
           </div>
 
-          <!-- Upcoming Rides -->
-          <div class="mb-4">
-            <h4 class="text-sm font-semibold text-warm-gray-700 mb-3">Upcoming Rides</h4>
-            <div class="space-y-2">
-              {#each route.rides as ride (ride.id)}
-                <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-warm-gray-50 transition-colors">
+          <!-- Next Ride Info -->
+          {@const nextRide = route.rides[0]}
+          {@const hasMore = route.rides.length > 1}
+          {@const isExpanded = expandedRoutes.has(route.id)}
+
+          <div class="flex items-center justify-between pb-3 border-b border-warm-gray-100 mb-3">
+            <div class="flex items-center gap-3">
+              {#if nextRide.status === 'live'}
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              {:else}
+                <div class="w-2 h-2 bg-warm-gray-300 rounded-full"></div>
+              {/if}
+              <div>
+                <div class="text-xs text-warm-gray-500">Next Ride</div>
+                <div class="font-bold text-warm-gray-900">{formatDate(nextRide.date)}</div>
+              </div>
+              {#if hasMore}
+                <button
+                  on:click={() => toggleRouteExpansion(route.id)}
+                  class="text-xs text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1 ml-2"
+                >
+                  +{route.rides.length - 1} more
+                  <svg class="w-4 h-4 transition-transform {isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              {/if}
+            </div>
+            <div class="flex gap-2">
+              {#if nextRide.status === 'live'}
+                <a href="/ride/{nextRide.id}" class="btn btn-primary text-sm px-4 py-2">
+                  Track Live
+                </a>
+              {:else}
+                <button on:click={() => expressInterest(nextRide.id)} class="btn btn-secondary text-sm px-4 py-2">
+                  Interested
+                </button>
+                <a href="/ride/{nextRide.id}" class="btn btn-primary text-sm px-4 py-2">
+                  Details
+                </a>
+              {/if}
+            </div>
+          </div>
+
+          <!-- Expanded Rides List -->
+          {#if isExpanded && hasMore}
+            <div class="space-y-2 mb-4">
+              {#each route.rides.slice(1, 4) as ride (ride.id)}
+                <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-warm-gray-50">
                   <div class="flex items-center gap-3">
-                    {#if ride.status === 'live'}
-                      <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    {:else}
-                      <div class="w-2 h-2 bg-warm-gray-300 rounded-full"></div>
-                    {/if}
+                    <div class="w-2 h-2 bg-warm-gray-300 rounded-full"></div>
                     <div>
-                      <div class="font-medium text-warm-gray-900">{formatDate(ride.date)}</div>
+                      <div class="font-medium text-warm-gray-900 text-sm">{formatDate(ride.date)}</div>
                       <div class="text-xs text-warm-gray-600">
                         {#if ride.follower_count > 0 || ride.interest_count > 0}
                           {ride.follower_count} following • {ride.interest_count} interested
@@ -234,23 +283,17 @@
                     </div>
                   </div>
                   <div class="flex gap-2">
-                    {#if ride.status === 'live'}
-                      <a href="/ride/{ride.id}" class="btn btn-primary text-sm px-4 py-2">
-                        Track Live
-                      </a>
-                    {:else}
-                      <button on:click={() => expressInterest(ride.id)} class="btn btn-secondary text-sm px-4 py-2">
-                        Interested
-                      </button>
-                      <a href="/ride/{ride.id}" class="btn btn-primary text-sm px-4 py-2">
-                        Details
-                      </a>
-                    {/if}
+                    <button on:click={() => expressInterest(ride.id)} class="btn btn-secondary text-xs px-3 py-1">
+                      Interested
+                    </button>
+                    <a href="/ride/{ride.id}" class="btn btn-primary text-xs px-3 py-1">
+                      Details
+                    </a>
                   </div>
                 </div>
               {/each}
             </div>
-          </div>
+          {/if}
         </div>
       {/each}
     </div>

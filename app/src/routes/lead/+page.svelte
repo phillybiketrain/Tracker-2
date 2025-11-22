@@ -11,6 +11,7 @@
   let description = '';
   let departureTime = '08:00';
   let estimatedDuration = '';
+  let routeTag = 'community'; // community | regular | special
   let selectedDates = [];
   let accessCode = '';
   let routeId = '';
@@ -282,6 +283,33 @@
                   placeholder="Brief description of your route"
                   class="input w-full h-24"
                 />
+              </div>
+
+              <div>
+                <label class="block font-semibold mb-2 text-warm-gray-900">Route Type</label>
+                <div class="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    on:click={() => routeTag = 'community'}
+                    class="px-4 py-3 rounded-xl font-medium transition-all {routeTag === 'community' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
+                  >
+                    Community
+                  </button>
+                  <button
+                    type="button"
+                    on:click={() => routeTag = 'regular'}
+                    class="px-4 py-3 rounded-xl font-medium transition-all {routeTag === 'regular' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
+                  >
+                    Regular
+                  </button>
+                  <button
+                    type="button"
+                    on:click={() => routeTag = 'special'}
+                    class="px-4 py-3 rounded-xl font-medium transition-all {routeTag === 'special' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
+                  >
+                    Special Event
+                  </button>
+                </div>
               </div>
 
               <div class="grid grid-cols-2 gap-4">
