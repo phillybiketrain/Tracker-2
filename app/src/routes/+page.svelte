@@ -140,7 +140,7 @@
 </script>
 
 <svelte:head>
-  <title>Browse Rides - Philly Bike Train</title>
+  <title>Philly Bike Train - Fixed-Route Bike Transit</title>
 </svelte:head>
 
 <div class="container mx-auto px-6 py-8">
