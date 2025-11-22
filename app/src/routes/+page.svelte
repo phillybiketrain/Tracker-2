@@ -6,15 +6,18 @@
   let routes = []; // Grouped by route
   let loading = true;
   let filter = 'week'; // today | tomorrow | week
-  let expandedRoutes = new Set(); // Track which routes are expanded
+  let openOverlay = null; // Track which route overlay is open
 
-  function toggleRouteExpansion(routeId) {
-    if (expandedRoutes.has(routeId)) {
-      expandedRoutes.delete(routeId);
+  function toggleOverlay(routeId) {
+    if (openOverlay === routeId) {
+      openOverlay = null;
     } else {
-      expandedRoutes.add(routeId);
+      openOverlay = routeId;
     }
-    expandedRoutes = expandedRoutes; // Trigger reactivity
+  }
+
+  function closeOverlay() {
+    openOverlay = null;
   }
 
   onMount(() => {
@@ -143,6 +146,8 @@
   <title>Philly Bike Train - Fixed-Route Bike Transit</title>
 </svelte:head>
 
+<svelte:window on:click={() => { if (openOverlay) closeOverlay(); }} />
+
 <div class="container mx-auto px-6 py-8">
 
   <!-- Header -->
@@ -197,7 +202,7 @@
       {#each routes as route (route.id)}
         {@const nextRide = route.rides[0]}
         {@const hasMore = route.rides.length > 1}
-        {@const isExpanded = expandedRoutes.has(route.id)}
+        {@const isOpen = openOverlay === route.id}
 
         <div class="card hover:shadow-md transition-all bg-white relative">
           <!-- Action Buttons - Top Right -->
@@ -242,28 +247,32 @@
             </div>
 
             {#if hasMore}
-              <button
-                on:click={() => toggleRouteExpansion(route.id)}
-                class="text-sm text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1 ml-4"
-              >
-                +{route.rides.length - 1} more
-                <svg class="w-3 h-3 transition-transform {isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+              <div class="relative ml-4">
+                <button
+                  on:click|stopPropagation={() => toggleOverlay(route.id)}
+                  class="text-sm text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1"
+                >
+                  +{route.rides.length - 1} more
+                  <svg class="w-3 h-3 transition-transform {isOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <!-- Overlay Tooltip -->
+                {#if isOpen}
+                  <div class="overlay-tooltip" on:click|stopPropagation>
+                    <div class="space-y-2">
+                      {#each route.rides.slice(1) as ride (ride.id)}
+                        <div class="text-sm text-warm-gray-900">
+                          {formatDate(ride.date)}
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              </div>
             {/if}
           </div>
-
-          <!-- Expanded Rides -->
-          {#if isExpanded && hasMore}
-            <div class="space-y-1 mt-2 ml-4 accordion-content">
-              {#each route.rides.slice(1, 4) as ride (ride.id)}
-                <div class="py-2 text-sm text-warm-gray-900">
-                  {formatDate(ride.date)}
-                </div>
-              {/each}
-            </div>
-          {/if}
 
           <!-- View Route Link -->
           {#if route.waypoints && route.waypoints.length > 0}
@@ -296,15 +305,25 @@
     overflow: hidden;
   }
 
-  .accordion-content {
-    animation: accordionSlide 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    transform-origin: top;
+  .overlay-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 0.5rem;
+    background: white;
+    border: 1px solid #EDEAE5;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    min-width: 150px;
+    animation: tooltipSlide 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  @keyframes accordionSlide {
+  @keyframes tooltipSlide {
     0% {
       opacity: 0;
-      transform: translateY(-10px) scale(0.98);
+      transform: translateY(-8px) scale(0.95);
     }
     100% {
       opacity: 1;
