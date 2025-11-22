@@ -7,7 +7,7 @@ export const API_URL = isProduction
   : (import.meta.env.PUBLIC_API_URL || 'http://localhost:3001');
 
 export const MAPBOX_TOKEN = isProduction
-  ? 'pk.eyJ1IjoicGhpbGx5YmlrZXRyYWluIiwiYSI6ImNtaTllcjhxYTBsNmIyanBycWVubTljZ2bifQ.D6OhenssmJL2TxRtaxWB5A'
+  ? 'pk.eyJ1IjoicGhpbGx5YmlrZXRyYWluIiwiYSI6ImNtaTl6dm54ZjB0eXIydG9hdHFjOHd1Y3MifQ._R6oFOXRKRLmNtmu9Qe2Jg'
   : import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
 console.log('🔍 Config:', { API_URL, hasToken: !!MAPBOX_TOKEN, isProduction });
