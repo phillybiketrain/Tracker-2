@@ -1,15 +1,13 @@
 // API configuration
-// In production, PUBLIC_API_URL should be set as an environment variable in Railway
-// Format: https://your-backend-url.railway.app (include the protocol!)
-export const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
+// Check if we're in production by looking at the hostname
+const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('railway.app');
 
-// Mapbox token
-export const MAPBOX_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
+export const API_URL = isProduction
+  ? 'https://tracker-2-production.up.railway.app'
+  : (import.meta.env.PUBLIC_API_URL || 'http://localhost:3001');
 
-// Debug: Log what we got during build
-console.log('🔍 Config loaded:', {
-  API_URL,
-  MAPBOX_TOKEN: MAPBOX_TOKEN ? `${MAPBOX_TOKEN.substring(0, 10)}...` : 'undefined',
-  raw_PUBLIC_API_URL: import.meta.env.PUBLIC_API_URL,
-  raw_PUBLIC_MAPBOX_TOKEN: import.meta.env.PUBLIC_MAPBOX_TOKEN ? 'present' : 'missing'
-});
+export const MAPBOX_TOKEN = isProduction
+  ? 'pk.eyJ1IjoicGhpbGx5YmlrZXRyYWluIiwiYSI6ImNtaTllcjhxYTBsNmIyanBycWVubTljZ2bifQ.D6OhenssmJL2TxRtaxWB5A'
+  : import.meta.env.PUBLIC_MAPBOX_TOKEN;
+
+console.log('🔍 Config:', { API_URL, hasToken: !!MAPBOX_TOKEN, isProduction });
