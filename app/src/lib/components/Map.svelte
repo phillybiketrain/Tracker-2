@@ -95,25 +95,21 @@
 
     // Draw route line
     if (showRoute && waypoints.length >= 2) {
-      if (map.getSource('route')) {
-        map.getSource('route').setData({
+      const updateRoute = () => {
+        const routeData = {
           type: 'Feature',
           geometry: {
             type: 'LineString',
             coordinates: waypoints.map(wp => [wp.lng, wp.lat])
           }
-        });
-      } else {
-        map.on('load', () => {
+        };
+
+        if (map.getSource('route')) {
+          map.getSource('route').setData(routeData);
+        } else {
           map.addSource('route', {
             type: 'geojson',
-            data: {
-              type: 'Feature',
-              geometry: {
-                type: 'LineString',
-                coordinates: waypoints.map(wp => [wp.lng, wp.lat])
-              }
-            }
+            data: routeData
           });
 
           map.addLayer({
@@ -126,8 +122,20 @@
               'line-opacity': 0.8
             }
           });
-        });
+        }
+      };
+
+      if (map.loaded()) {
+        updateRoute();
+      } else {
+        map.once('load', updateRoute);
       }
+    } else if (map && map.getSource('route')) {
+      // Remove route if less than 2 waypoints
+      if (map.getLayer('route')) {
+        map.removeLayer('route');
+      }
+      map.removeSource('route');
     }
   }
 
