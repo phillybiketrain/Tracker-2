@@ -216,44 +216,35 @@
             {/if}
           </div>
 
-          <!-- Route Header -->
-          <div class="mb-3 pr-32">
-            <h3 class="text-xl font-bold text-warm-gray-900 mb-1">{route.name}</h3>
-            {#if route.description}
-              <p class="text-sm text-warm-gray-600 line-clamp-2">{route.description}</p>
-            {/if}
+          <!-- Route Name -->
+          <div class="mb-4 pr-32">
+            <h3 class="text-lg font-bold text-warm-gray-900">{route.name}</h3>
           </div>
 
-          <!-- Route Info -->
-          <div class="flex gap-4 text-xs text-warm-gray-600 mb-3 pb-3 border-b border-warm-gray-100">
-            <div>
-              <span class="text-warm-gray-500">Departs</span>
-              <span class="font-semibold text-warm-gray-900 ml-1">{formatTime(route.departure_time)}</span>
-            </div>
+          <!-- Departure Info -->
+          <div class="flex items-center gap-3 text-sm text-warm-gray-900 mb-4">
+            <div class="font-medium">{formatTime(route.departure_time)}</div>
             {#if route.estimated_duration}
-              <div>
-                <span class="text-warm-gray-500">Duration</span>
-                <span class="font-semibold text-warm-gray-900 ml-1">{route.estimated_duration}</span>
-              </div>
+              <div class="text-warm-gray-400">•</div>
+              <div class="text-warm-gray-600">{route.estimated_duration}</div>
             {/if}
           </div>
 
-          <!-- Next Ride -->
+          <!-- Next Ride Date -->
           <div class="mb-2">
-            <div class="flex items-center gap-2 mb-1">
+            <div class="flex items-center gap-2 mb-2">
               {#if nextRide.status === 'live'}
                 <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               {:else}
                 <div class="w-2 h-2 bg-warm-gray-300 rounded-full"></div>
               {/if}
-              <div class="text-xs text-warm-gray-500">Next Ride</div>
+              <div class="text-sm font-medium text-warm-gray-900">{formatDate(nextRide.date)}</div>
             </div>
-            <div class="font-bold text-warm-gray-900 mb-1">{formatDate(nextRide.date)}</div>
 
             {#if hasMore}
               <button
                 on:click={() => toggleRouteExpansion(route.id)}
-                class="text-xs text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1"
+                class="text-sm text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1 ml-4"
               >
                 +{route.rides.length - 1} more
                 <svg class="w-3 h-3 transition-transform {isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,30 +256,25 @@
 
           <!-- Expanded Rides -->
           {#if isExpanded && hasMore}
-            <div class="space-y-1 mt-2 accordion-content">
+            <div class="space-y-1 mt-2 ml-4 accordion-content">
               {#each route.rides.slice(1, 4) as ride (ride.id)}
-                <div class="py-1 px-2 rounded bg-warm-gray-50 text-sm">
-                  <div class="font-medium text-warm-gray-900">{formatDate(ride.date)}</div>
-                  {#if ride.follower_count > 0 || ride.interest_count > 0}
-                    <div class="text-xs text-warm-gray-600">
-                      {ride.follower_count} following • {ride.interest_count} interested
-                    </div>
-                  {/if}
+                <div class="py-2 text-sm text-warm-gray-900">
+                  {formatDate(ride.date)}
                 </div>
               {/each}
             </div>
           {/if}
 
-          <!-- View Route Button -->
+          <!-- View Route Link -->
           {#if route.waypoints && route.waypoints.length > 0}
             <a
               href="/ride/{nextRide.id}"
-              class="mt-3 pt-3 border-t border-warm-gray-100 w-full text-left text-xs text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1"
+              class="mt-4 pt-4 border-t border-warm-gray-100 w-full text-sm text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-2"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
               </svg>
-              View route on map
+              View route
             </a>
           {/if}
         </div>
