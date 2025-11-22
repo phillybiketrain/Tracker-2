@@ -8,6 +8,7 @@
   let loading = true;
   let filter = 'week'; // today | tomorrow | week
   let showMap = false;
+  let allWaypoints = [];
 
   onMount(() => {
     loadRides();
@@ -58,6 +59,9 @@
         });
 
         routes = Array.from(routeMap.values());
+
+        // Collect all unique waypoints for map display
+        allWaypoints = routes.flatMap(r => r.waypoints || []);
       }
 
     } catch (error) {
@@ -174,10 +178,10 @@
   </div>
 
   <!-- Map View -->
-  {#if showMap && routes.length > 0}
+  {#if showMap && allWaypoints.length > 0}
     <div class="card mb-8 p-0 overflow-hidden">
       <div class="h-[500px]">
-        <Map waypoints={routes.flatMap(r => r.waypoints || [])} showRoute={false} />
+        <Map waypoints={allWaypoints} showRoute={false} />
       </div>
     </div>
   {/if}
