@@ -4,7 +4,8 @@
   import { io } from 'socket.io-client';
   import { API_URL } from '$lib/config.js';
 
-  let step = 'draw'; // draw | details | schedule | broadcasting | success
+  let step = 'creating'; // creating | broadcasting | success
+  let activeStep = 1; // 1 = details, 2 = map, 3 = schedule
   let waypoints = [];
   let routeName = '';
   let description = '';
@@ -19,9 +20,13 @@
   let watchId = null;
 
   function handleMapClick(coords) {
-    if (step === 'draw') {
+    if (step === 'creating') {
       waypoints = [...waypoints, coords];
     }
+  }
+
+  function toggleStep(stepNum) {
+    activeStep = activeStep === stepNum ? 0 : stepNum;
   }
 
   function clearRoute() {
@@ -49,30 +54,25 @@
   }
 
   function nextStep() {
-    if (step === 'draw') {
-      if (waypoints.length < 2) {
-        alert('Add at least 2 waypoints');
-        return;
-      }
-      step = 'details';
-    } else if (step === 'details') {
+    if (activeStep === 1) {
       if (!routeName || !departureTime) {
         alert('Fill in required fields');
         return;
       }
-      step = 'schedule';
-    } else if (step === 'schedule') {
+      activeStep = 2;
+    } else if (activeStep === 2) {
+      if (waypoints.length < 2) {
+        alert('Add at least 2 waypoints');
+        return;
+      }
+      activeStep = 3;
+    } else if (activeStep === 3) {
       if (selectedDates.length === 0) {
         alert('Select at least one date');
         return;
       }
       createRoute();
     }
-  }
-
-  function prevStep() {
-    if (step === 'details') step = 'draw';
-    else if (step === 'schedule') step = 'details';
   }
 
   async function createRoute() {
@@ -224,147 +224,222 @@
 
 <div class="container mx-auto px-4 py-8">
 
-  {#if step === 'draw'}
-    <!-- Step 1: Draw Route -->
+  {#if step === 'creating'}
+    <!-- Route Creation Accordion -->
     <div class="mb-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold mb-2">Create a Route</h1>
-          <p class="text-gray-600">Click on the map to add waypoints • Click markers to remove them</p>
-        </div>
-        <div class="text-right">
-          <div class="text-sm text-warm-gray-500 mb-2">Waypoints</div>
-          <div class="text-3xl font-bold text-warm-gray-900">{waypoints.length}</div>
-        </div>
-      </div>
+      <h1 class="text-3xl font-bold mb-2 text-warm-gray-900">Create a Route</h1>
+      <p class="text-warm-gray-600">Follow the steps below to create your bike train route</p>
     </div>
 
-    <div class="mb-4 flex gap-2">
-      <button on:click={useCurrentLocation} class="btn btn-secondary">
-        Use My Location
-      </button>
-      <button on:click={clearRoute} class="btn btn-secondary">
-        Clear All
-      </button>
-      <button
-        on:click={nextStep}
-        disabled={waypoints.length < 2}
-        class="btn btn-primary ml-auto disabled:opacity-50"
-      >
-        Next: Route Details →
-      </button>
-    </div>
+    <div class="max-w-4xl mx-auto space-y-4">
 
-    <div class="h-[600px] w-full">
-      <Map {waypoints} onMapClick={handleMapClick} onMarkerClick={removeWaypoint} />
-    </div>
-
-  {:else if step === 'details'}
-    <!-- Step 2: Route Details -->
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold mb-2 text-warm-gray-900">Route Details</h1>
-      <p class="text-warm-gray-600">Step 2: Name your route and set departure time</p>
-    </div>
-
-    <div class="max-w-2xl mx-auto card">
-      <div class="space-y-4">
-        <div>
-          <label class="block font-semibold mb-2 text-warm-gray-900">Route Name *</label>
-          <input
-            bind:value={routeName}
-            type="text"
-            placeholder="e.g., Market St Commuter"
-            class="input w-full"
-          />
-        </div>
-
-        <div>
-          <label class="block font-semibold mb-2 text-warm-gray-900">Description</label>
-          <textarea
-            bind:value={description}
-            placeholder="Brief description of your route"
-            class="input w-full h-24"
-          />
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block font-semibold mb-2 text-warm-gray-900">Departure Time *</label>
-            <input
-              bind:value={departureTime}
-              type="time"
-              class="input w-full"
-            />
-          </div>
-
-          <div>
-            <label class="block font-semibold mb-2 text-warm-gray-900">Duration (optional)</label>
-            <input
-              bind:value={estimatedDuration}
-              type="text"
-              placeholder="e.g., 45 minutes"
-              class="input w-full"
-            />
-          </div>
-        </div>
-
-        <div class="flex gap-4 pt-4">
-          <button on:click={prevStep} class="btn btn-secondary flex-1">
-            Back
-          </button>
-          <button on:click={nextStep} class="btn btn-primary flex-1">
-            Next: Schedule
-          </button>
-        </div>
-      </div>
-    </div>
-
-  {:else if step === 'schedule'}
-    <!-- Step 3: Schedule Dates -->
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold mb-2 text-warm-gray-900">Schedule Rides</h1>
-      <p class="text-warm-gray-600">Step 3: When will you lead this route?</p>
-    </div>
-
-    <div class="max-w-3xl mx-auto card">
-      <p class="mb-4 text-gray-600">Select dates (you can select multiple):</p>
-
-      <div class="grid grid-cols-7 gap-2 mb-6">
-        {#each getNext30Days() as date}
-          {@const isSelected = selectedDates.includes(date)}
-          {@const dateObj = new Date(date)}
-
-          <button
-            on:click={() => toggleDate(date)}
-            class="p-2 rounded text-sm border transition-colors {isSelected ? 'bg-primary text-white border-primary' : 'hover:border-primary'}"
-          >
-            <div class="font-bold">{dateObj.getDate()}</div>
-            <div class="text-xs">{dateObj.toLocaleDateString('en-US', { month: 'short' })}</div>
-          </button>
-        {/each}
-      </div>
-
-      {#if selectedDates.length > 0}
-        <div class="mb-4 p-3 bg-blue-50 rounded">
-          <p class="font-medium">Selected dates:</p>
-          <p class="text-sm text-gray-600">
-            {selectedDates.map(d => new Date(d).toLocaleDateString()).join(', ')}
-          </p>
-        </div>
-      {/if}
-
-      <div class="flex gap-4">
-        <button on:click={prevStep} class="btn btn-secondary flex-1">
-          ← Back
-        </button>
+      <!-- Step 1: Route Details -->
+      <div class="card overflow-hidden">
         <button
-          on:click={nextStep}
-          disabled={selectedDates.length === 0}
-          class="btn btn-primary flex-1 disabled:opacity-50"
+          on:click={() => toggleStep(1)}
+          class="w-full text-left px-6 py-4 flex items-center justify-between hover:bg-warm-gray-50 transition-colors"
         >
-          Create Route
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+              1
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-warm-gray-900">Route Details</h2>
+              <p class="text-sm text-warm-gray-600">Name, time, and description</p>
+            </div>
+          </div>
+          <svg
+            class="w-6 h-6 text-warm-gray-400 transition-transform {activeStep === 1 ? 'rotate-180' : ''}"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
         </button>
+
+        {#if activeStep === 1}
+          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100">
+            <div class="space-y-4">
+              <div>
+                <label class="block font-semibold mb-2 text-warm-gray-900">Route Name *</label>
+                <input
+                  bind:value={routeName}
+                  type="text"
+                  placeholder="e.g., Market St Commuter"
+                  class="input w-full"
+                />
+              </div>
+
+              <div>
+                <label class="block font-semibold mb-2 text-warm-gray-900">Description</label>
+                <textarea
+                  bind:value={description}
+                  placeholder="Brief description of your route"
+                  class="input w-full h-24"
+                />
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-semibold mb-2 text-warm-gray-900">Departure Time *</label>
+                  <input
+                    bind:value={departureTime}
+                    type="time"
+                    class="input w-full"
+                  />
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-2 text-warm-gray-900">Duration (optional)</label>
+                  <input
+                    bind:value={estimatedDuration}
+                    type="text"
+                    placeholder="e.g., 45 minutes"
+                    class="input w-full"
+                  />
+                </div>
+              </div>
+
+              <div class="pt-4">
+                <button
+                  on:click={nextStep}
+                  disabled={!routeName || !departureTime}
+                  class="btn btn-primary w-full disabled:opacity-50"
+                >
+                  Next: Draw Route →
+                </button>
+              </div>
+            </div>
+          </div>
+        {/if}
       </div>
+
+      <!-- Step 2: Draw Route on Map -->
+      <div class="card overflow-hidden">
+        <button
+          on:click={() => toggleStep(2)}
+          class="w-full text-left px-6 py-4 flex items-center justify-between hover:bg-warm-gray-50 transition-colors"
+        >
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+              2
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-warm-gray-900">Draw Route</h2>
+              <p class="text-sm text-warm-gray-600">
+                {waypoints.length === 0 ? 'Click on map to add waypoints' : `${waypoints.length} waypoint${waypoints.length === 1 ? '' : 's'} added`}
+              </p>
+            </div>
+          </div>
+          <svg
+            class="w-6 h-6 text-warm-gray-400 transition-transform {activeStep === 2 ? 'rotate-180' : ''}"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {#if activeStep === 2}
+          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100">
+            <p class="text-warm-gray-600 mb-4">Click on the map to add waypoints • Click markers to remove them</p>
+
+            <div class="mb-4 flex gap-2">
+              <button on:click={useCurrentLocation} class="btn btn-secondary">
+                Use My Location
+              </button>
+              <button on:click={clearRoute} class="btn btn-secondary">
+                Clear All
+              </button>
+            </div>
+
+            <div class="h-[500px] w-full mb-4">
+              <Map {waypoints} onMapClick={handleMapClick} onMarkerClick={removeWaypoint} />
+            </div>
+
+            <div class="pt-4">
+              <button
+                on:click={nextStep}
+                disabled={waypoints.length < 2}
+                class="btn btn-primary w-full disabled:opacity-50"
+              >
+                Next: Schedule Rides →
+              </button>
+            </div>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Step 3: Schedule Dates -->
+      <div class="card overflow-hidden">
+        <button
+          on:click={() => toggleStep(3)}
+          class="w-full text-left px-6 py-4 flex items-center justify-between hover:bg-warm-gray-50 transition-colors"
+        >
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+              3
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-warm-gray-900">Schedule Rides</h2>
+              <p class="text-sm text-warm-gray-600">
+                {selectedDates.length === 0 ? 'Select dates to run this route' : `${selectedDates.length} date${selectedDates.length === 1 ? '' : 's'} selected`}
+              </p>
+            </div>
+          </div>
+          <svg
+            class="w-6 h-6 text-warm-gray-400 transition-transform {activeStep === 3 ? 'rotate-180' : ''}"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {#if activeStep === 3}
+          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100">
+            <p class="mb-4 text-gray-600">Select dates (you can select multiple):</p>
+
+            <div class="grid grid-cols-7 gap-2 mb-6">
+              {#each getNext30Days() as date}
+                {@const isSelected = selectedDates.includes(date)}
+                {@const dateObj = new Date(date)}
+
+                <button
+                  on:click={() => toggleDate(date)}
+                  class="p-2 rounded text-sm border transition-colors {isSelected ? 'bg-primary text-white border-primary' : 'hover:border-primary'}"
+                >
+                  <div class="font-bold">{dateObj.getDate()}</div>
+                  <div class="text-xs">{dateObj.toLocaleDateString('en-US', { month: 'short' })}</div>
+                </button>
+              {/each}
+            </div>
+
+            {#if selectedDates.length > 0}
+              <div class="mb-4 p-3 bg-blue-50 rounded">
+                <p class="font-medium">Selected dates:</p>
+                <p class="text-sm text-gray-600">
+                  {selectedDates.map(d => new Date(d).toLocaleDateString()).join(', ')}
+                </p>
+              </div>
+            {/if}
+
+            <div class="pt-4">
+              <button
+                on:click={nextStep}
+                disabled={selectedDates.length === 0}
+                class="btn btn-primary w-full disabled:opacity-50"
+              >
+                Create Route
+              </button>
+            </div>
+          </div>
+        {/if}
+      </div>
+
     </div>
 
   {:else if step === 'success'}
