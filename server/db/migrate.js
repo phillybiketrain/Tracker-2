@@ -1,11 +1,11 @@
 /**
  * Database Migration Script
- * Runs the schema.sql file to create all tables
+ * Runs the schema.sql file and migration files
  * Run with: npm run db:migrate
  */
 
 import pg from 'pg';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
@@ -37,6 +37,24 @@ async function runMigrations() {
     // Execute schema
     await client.query(schema);
     console.log('✅ Schema executed successfully');
+
+    // Run migration files if they exist
+    const migrationsDir = join(__dirname, 'migrations');
+    if (existsSync(migrationsDir)) {
+      const files = readdirSync(migrationsDir)
+        .filter(f => f.endsWith('.sql'))
+        .sort();
+
+      if (files.length > 0) {
+        console.log('\n🔄 Running migration files...');
+        for (const file of files) {
+          const filePath = join(migrationsDir, file);
+          const sql = readFileSync(filePath, 'utf-8');
+          await client.query(sql);
+          console.log(`✅ ${file} executed`);
+        }
+      }
+    }
 
     // Verify tables created
     const tables = await client.query(`
