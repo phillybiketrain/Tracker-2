@@ -7,6 +7,7 @@
   export let zoom = 12;
   export let waypoints = [];
   export let onMapClick = null;
+  export let onMarkerClick = null;
   export let showRoute = true;
   export let leaderLocation = null;
   export let autoCenter = false;
@@ -30,6 +31,11 @@
       style: 'mapbox://styles/mapbox/streets-v12',
       center: center,
       zoom: zoom
+    });
+
+    // Resize map when loaded to ensure proper dimensions
+    map.on('load', () => {
+      map.resize();
     });
 
     // Add navigation controls
@@ -69,7 +75,16 @@
     waypoints.forEach((wp, index) => {
       const el = document.createElement('div');
       el.className = 'waypoint-marker';
-      el.innerHTML = `<div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">${index + 1}</div>`;
+      el.style.cursor = onMarkerClick ? 'pointer' : 'default';
+      el.innerHTML = `<div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-lg transition-transform hover:scale-110">${index + 1}</div>`;
+
+      // Make marker clickable if callback provided
+      if (onMarkerClick) {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          onMarkerClick(index);
+        });
+      }
 
       const marker = new mapboxgl.Marker(el)
         .setLngLat([wp.lng, wp.lat])

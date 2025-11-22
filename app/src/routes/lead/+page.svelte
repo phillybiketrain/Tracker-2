@@ -28,6 +28,10 @@
     waypoints = [];
   }
 
+  function removeWaypoint(index) {
+    waypoints = waypoints.filter((_, i) => i !== index);
+  }
+
   function useCurrentLocation() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -223,53 +227,36 @@
   {#if step === 'draw'}
     <!-- Step 1: Draw Route -->
     <div class="mb-6">
-      <h1 class="text-3xl font-bold mb-2">Create a Route</h1>
-      <p class="text-gray-600">Step 1: Draw your route on the map</p>
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold mb-2">Create a Route</h1>
+          <p class="text-gray-600">Click on the map to add waypoints • Click markers to remove them</p>
+        </div>
+        <div class="text-right">
+          <div class="text-sm text-warm-gray-500 mb-2">Waypoints</div>
+          <div class="text-3xl font-bold text-warm-gray-900">{waypoints.length}</div>
+        </div>
+      </div>
     </div>
 
-    <div class="grid lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 h-[600px]">
-        <Map {waypoints} onMapClick={handleMapClick} />
-      </div>
+    <div class="mb-4 flex gap-2">
+      <button on:click={useCurrentLocation} class="btn btn-secondary">
+        Use My Location
+      </button>
+      <button on:click={clearRoute} class="btn btn-secondary">
+        Clear All
+      </button>
+      <button
+        on:click={nextStep}
+        disabled={waypoints.length < 2}
+        class="btn btn-primary ml-auto disabled:opacity-50"
+      >
+        Next: Route Details →
+      </button>
+    </div>
 
-      <div class="card">
-        <h2 class="font-bold text-xl mb-4">Waypoints ({waypoints.length})</h2>
-
-        <div class="space-y-2 mb-4 max-h-64 overflow-y-auto">
-          {#each waypoints as wp, i}
-            <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
-              <div class="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">
-                {i + 1}
-              </div>
-              <div class="flex-1 text-sm">
-                {wp.lat.toFixed(4)}, {wp.lng.toFixed(4)}
-              </div>
-            </div>
-          {/each}
-        </div>
-
-        <div class="space-y-2">
-          <button on:click={useCurrentLocation} class="btn btn-secondary w-full">
-            Use My Location
-          </button>
-
-          <button on:click={clearRoute} class="btn btn-secondary w-full">
-            Clear Route
-          </button>
-
-          <button
-            on:click={nextStep}
-            disabled={waypoints.length < 2}
-            class="btn btn-primary w-full disabled:opacity-50"
-          >
-            Next: Route Details
-          </button>
-        </div>
-
-        <p class="text-sm text-warm-gray-500 mt-4">
-          Click on the map to add waypoints
-        </p>
-      </div>
+    <div class="h-[600px] w-full">
+      <Map {waypoints} onMapClick={handleMapClick} onMarkerClick={removeWaypoint} />
     </div>
 
   {:else if step === 'details'}
