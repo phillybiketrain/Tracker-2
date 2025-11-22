@@ -1,6 +1,5 @@
 <script>
   import { onMount } from 'svelte';
-  import Map from '$lib/components/Map.svelte';
   import { API_URL } from '$lib/config.js';
 
   let rides = [];
@@ -8,7 +7,6 @@
   let loading = true;
   let filter = 'week'; // today | tomorrow | week
   let expandedRoutes = new Set(); // Track which routes are expanded
-  let selectedRoute = null; // For map display
 
   function toggleRouteExpansion(routeId) {
     if (expandedRoutes.has(routeId)) {
@@ -193,39 +191,6 @@
       </a>
     </div>
 
-  <!-- Map View -->
-  {:else if selectedRoute}
-    <div class="mb-6">
-      <button
-        on:click={() => selectedRoute = null}
-        class="mb-4 text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-2"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to routes
-      </button>
-
-      <div class="card p-0 overflow-hidden">
-        <div class="h-[500px]">
-          <Map waypoints={selectedRoute.waypoints} showRoute={true} />
-        </div>
-      </div>
-
-      <div class="card mt-4">
-        <h2 class="text-2xl font-bold mb-2">{selectedRoute.name}</h2>
-        {#if selectedRoute.description}
-          <p class="text-warm-gray-600 mb-4">{selectedRoute.description}</p>
-        {/if}
-        <div class="flex gap-4 text-sm text-warm-gray-600">
-          <div>Departure: <span class="font-semibold text-warm-gray-900">{formatTime(selectedRoute.departure_time)}</span></div>
-          {#if selectedRoute.estimated_duration}
-            <div>Duration: <span class="font-semibold text-warm-gray-900">{selectedRoute.estimated_duration}</span></div>
-          {/if}
-        </div>
-      </div>
-    </div>
-
   <!-- Routes List -->
   {:else}
     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -316,15 +281,15 @@
 
           <!-- View Route Button -->
           {#if route.waypoints && route.waypoints.length > 0}
-            <button
-              on:click={() => selectedRoute = route}
+            <a
+              href="/ride/{nextRide.id}"
               class="mt-3 pt-3 border-t border-warm-gray-100 w-full text-left text-xs text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
               </svg>
               View route on map
-            </button>
+            </a>
           {/if}
         </div>
       {/each}
