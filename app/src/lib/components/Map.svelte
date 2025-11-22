@@ -16,6 +16,8 @@
   let map;
   let markers = [];
   let routeLine = null;
+  let userInteracting = false;
+  let interactionTimeout = null;
 
   onMount(() => {
     if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'pk.YOUR_MAPBOX_TOKEN_HERE') {
@@ -58,6 +60,31 @@
       map.on('click', (e) => {
         onMapClick({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       });
+    }
+
+    // Track user interaction for auto-centering
+    if (autoCenter) {
+      const handleInteractionStart = () => {
+        userInteracting = true;
+        if (interactionTimeout) {
+          clearTimeout(interactionTimeout);
+        }
+      };
+
+      const handleInteractionEnd = () => {
+        if (interactionTimeout) {
+          clearTimeout(interactionTimeout);
+        }
+        // Wait 3 seconds after interaction stops to resume auto-centering
+        interactionTimeout = setTimeout(() => {
+          userInteracting = false;
+        }, 3000);
+      };
+
+      map.on('dragstart', handleInteractionStart);
+      map.on('dragend', handleInteractionEnd);
+      map.on('touchstart', handleInteractionStart);
+      map.on('touchend', handleInteractionEnd);
     }
   });
 
@@ -152,11 +179,12 @@
         .addTo(map);
     }
 
-    // Auto-center on leader if enabled
-    if (autoCenter) {
+    // Auto-center on leader if enabled and user not interacting
+    if (autoCenter && !userInteracting) {
       map.flyTo({
         center: [leaderLocation.lng, leaderLocation.lat],
-        essential: true
+        essential: true,
+        duration: 1000
       });
     }
   }

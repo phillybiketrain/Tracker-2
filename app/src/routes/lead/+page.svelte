@@ -16,6 +16,7 @@
   let routeId = '';
   let broadcasting = false;
   let followerCount = 0;
+  let currentLocation = null;
   let socket = null;
   let watchId = null;
 
@@ -146,6 +147,9 @@
         (position) => {
           const { latitude, longitude, accuracy } = position.coords;
 
+          // Update current location for map centering
+          currentLocation = { lat: latitude, lng: longitude };
+
           socket.emit('location:update', {
             accessCode,
             lat: latitude,
@@ -259,7 +263,7 @@
         </button>
 
         {#if activeStep === 1}
-          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100">
+          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100 accordion-content">
             <div class="space-y-4">
               <div>
                 <label class="block font-semibold mb-2 text-warm-gray-900">Route Name *</label>
@@ -343,7 +347,7 @@
         </button>
 
         {#if activeStep === 2}
-          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100">
+          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100 accordion-content">
             <p class="text-warm-gray-600 mb-4">Click on the map to add waypoints • Click markers to remove them</p>
 
             <div class="mb-4 flex gap-2">
@@ -400,7 +404,7 @@
         </button>
 
         {#if activeStep === 3}
-          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100">
+          <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100 accordion-content">
             <p class="mb-4 text-gray-600">Select dates (you can select multiple):</p>
 
             <div class="grid grid-cols-7 gap-2 mb-6">
@@ -481,46 +485,45 @@
 
   {:else if step === 'broadcasting'}
     <!-- Broadcasting Screen -->
-    <div class="mb-6">
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-3">
-          <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-          <h1 class="text-4xl font-bold text-warm-gray-900">Broadcasting</h1>
+    <div class="fixed inset-0 pt-[60px] flex flex-col">
+      <div class="bg-white border-b border-warm-gray-200 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-sm font-semibold text-warm-gray-900">Broadcasting</span>
+          </div>
+          <div class="h-4 w-px bg-warm-gray-300"></div>
+          <span class="font-bold text-warm-gray-900">{routeName}</span>
+          <div class="h-4 w-px bg-warm-gray-300"></div>
+          <span class="text-sm text-warm-gray-600">{followerCount} {followerCount === 1 ? 'follower' : 'followers'}</span>
         </div>
-        <button on:click={stopBroadcasting} class="btn btn-danger">
+        <button on:click={stopBroadcasting} class="btn btn-danger text-sm px-4 py-2">
           End Ride
         </button>
       </div>
-      <p class="text-warm-gray-600 text-lg">
-        <span class="font-semibold">{routeName}</span> · Code: <span class="font-mono font-bold">{accessCode}</span>
-      </p>
-    </div>
 
-    <div class="grid grid-cols-4 gap-4 mb-6">
-      <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-        <div class="text-xs text-warm-gray-500 mb-2">Followers</div>
-        <div class="text-5xl font-bold text-warm-gray-900">{followerCount}</div>
+      <div class="flex-1 relative">
+        <Map {waypoints} autoCenter={true} leaderLocation={currentLocation} />
       </div>
-
-      <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-        <div class="text-xs text-warm-gray-500 mb-2">GPS</div>
-        <div class="text-xl font-bold text-green-600 mt-2">Active</div>
-      </div>
-
-      <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-        <div class="text-xs text-warm-gray-500 mb-2">Route</div>
-        <div class="text-lg font-bold text-warm-gray-900 truncate mt-1">{routeName}</div>
-      </div>
-
-      <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-        <div class="text-xs text-warm-gray-500 mb-2">Time</div>
-        <div class="text-2xl font-bold text-warm-gray-900 mt-1">{departureTime}</div>
-      </div>
-    </div>
-
-    <div class="h-[500px] rounded-2xl overflow-hidden">
-      <Map {waypoints} autoCenter={true} />
     </div>
   {/if}
 
 </div>
+
+<style>
+  .accordion-content {
+    animation: accordionSlide 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: top;
+  }
+
+  @keyframes accordionSlide {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+</style>
