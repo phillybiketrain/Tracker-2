@@ -29,7 +29,8 @@
       "Bash(/c/Program Files/nodejs/npm.cmd install -D @sveltejs/adapter-node)",
       "Bash(.gitignore)",
       "Bash(npm run build:*)",
-      "Bash(cmd /c npm run build)"
+      "Bash(cmd /c npm run build)",
+      "Bash(cmd /c \"where node\")"
     ],
     "deny": [],
     "ask": []
