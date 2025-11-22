@@ -195,6 +195,10 @@
   {:else}
     <div class="space-y-6">
       {#each routes as route (route.id)}
+        {@const nextRide = route.rides[0]}
+        {@const hasMore = route.rides.length > 1}
+        {@const isExpanded = expandedRoutes.has(route.id)}
+
         <div class="card hover:shadow-md transition-all bg-white">
           <!-- Route Header -->
           <div class="mb-4">
@@ -221,9 +225,6 @@
           </div>
 
           <!-- Next Ride Info -->
-          {@const nextRide = route.rides[0]}
-          {@const hasMore = route.rides.length > 1}
-          {@const isExpanded = expandedRoutes.has(route.id)}
 
           <div class="flex items-center justify-between pb-3 border-b border-warm-gray-100 mb-3">
             <div class="flex items-center gap-3">
