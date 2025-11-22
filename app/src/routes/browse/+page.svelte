@@ -1,14 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import Map from '$lib/components/Map.svelte';
   import { API_URL } from '$lib/config.js';
 
   let rides = [];
   let routes = []; // Grouped by route
   let loading = true;
   let filter = 'week'; // today | tomorrow | week
-  let showMap = false;
-  let allWaypoints = [];
 
   onMount(() => {
     loadRides();
@@ -59,9 +56,6 @@
         });
 
         routes = Array.from(routeMap.values());
-
-        // Collect all unique waypoints for map display
-        allWaypoints = routes.flatMap(r => r.waypoints || []);
       }
 
     } catch (error) {
@@ -145,46 +139,28 @@
   <div class="mb-8">
     <h1 class="text-4xl font-bold mb-6 text-warm-gray-900">Browse Routes</h1>
 
-    <!-- Filters and View Toggle -->
-    <div class="flex items-center justify-between">
-      <div class="flex gap-3">
-        <button
-          on:click={() => filter = 'today'}
-          class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'today' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
-        >
-          Today
-        </button>
-        <button
-          on:click={() => filter = 'tomorrow'}
-          class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'tomorrow' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
-        >
-          Tomorrow
-        </button>
-        <button
-          on:click={() => filter = 'week'}
-          class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'week' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
-        >
-          This Week
-        </button>
-      </div>
-
+    <!-- Filters -->
+    <div class="flex gap-3">
       <button
-        on:click={() => showMap = !showMap}
-        class="px-6 py-3 rounded-2xl font-medium transition-all bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200"
+        on:click={() => filter = 'today'}
+        class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'today' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
       >
-        {showMap ? 'Hide Map' : 'Show Map'}
+        Today
+      </button>
+      <button
+        on:click={() => filter = 'tomorrow'}
+        class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'tomorrow' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
+      >
+        Tomorrow
+      </button>
+      <button
+        on:click={() => filter = 'week'}
+        class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'week' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
+      >
+        This Week
       </button>
     </div>
   </div>
-
-  <!-- Map View -->
-  {#if showMap && allWaypoints.length > 0}
-    <div class="card mb-8 p-0 overflow-hidden">
-      <div class="h-[500px]">
-        <Map waypoints={allWaypoints} showRoute={false} />
-      </div>
-    </div>
-  {/if}
 
   <!-- Loading State -->
   {#if loading}
@@ -285,12 +261,3 @@
   {/if}
 
 </div>
-
-<style>
-  .line-clamp-1 {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-</style>
