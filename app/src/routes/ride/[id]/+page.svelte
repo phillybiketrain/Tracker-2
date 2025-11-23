@@ -188,7 +188,7 @@
       <div class="grid md:grid-cols-3 gap-6 mb-6">
         <div class="md:col-span-2">
           <div class="h-96 mb-4 rounded-2xl overflow-hidden">
-            <Map waypoints={ride.waypoints || []} />
+            <Map waypoints={ride.waypoints || []} showMarkers={false} />
           </div>
 
           {#if ride.route_description}
