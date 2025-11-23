@@ -188,7 +188,7 @@
                 class="w-full px-4 py-2 border border-warm-gray-300 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               ></textarea>
               <p class="text-xs text-warm-gray-500 mt-1">
-                Available variables: <code>{{'{{'}}routes{{'}}'}}</code>, <code>{{'{{'}}unsubscribe_url{{'}}'}}</code>, <code>{{'{{'}}message{{'}}'}}</code>
+                Available variables: <code>{`{{routes}}`}</code>, <code>{`{{unsubscribe_url}}`}</code>, <code>{`{{message}}`}</code>
               </p>
             </div>
 
@@ -281,9 +281,9 @@
         <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
           <h3 class="text-sm font-semibold text-blue-900 mb-2">Template Variables</h3>
           <ul class="text-sm text-blue-800 space-y-1">
-            <li>• <code>{{'{{'}}routes{{'}}'}}</code> - List of upcoming rides (weekly digest)</li>
-            <li>• <code>{{'{{'}}unsubscribe_url{{'}}'}}</code> - Link to unsubscribe</li>
-            <li>• <code>{{'{{'}}message{{'}}'}}</code> - Custom message content (blast template)</li>
+            <li>• <code>{`{{routes}}`}</code> - List of upcoming rides (weekly digest)</li>
+            <li>• <code>{`{{unsubscribe_url}}`}</code> - Link to unsubscribe</li>
+            <li>• <code>{`{{message}}`}</code> - Custom message content (blast template)</li>
           </ul>
         </div>
       </div>
