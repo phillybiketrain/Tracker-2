@@ -10,6 +10,65 @@ import { z } from 'zod';
 const router = express.Router();
 
 /**
+ * GET /api/rides/live
+ * Get all currently live rides across all regions
+ */
+router.get('/live', async (req, res) => {
+  try {
+    const { region = 'philly' } = req.query;
+
+    // Get region_id
+    const regionData = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [region]);
+
+    if (!regionData) {
+      return res.status(400).json({
+        error: 'Invalid region',
+        message: `Region '${region}' does not exist`
+      });
+    }
+
+    const liveRides = await queryAll(`
+      SELECT
+        ri.*,
+        r.access_code,
+        r.name as route_name,
+        r.description as route_description,
+        r.waypoints,
+        r.departure_time,
+        r.estimated_duration,
+        r.tag,
+        COUNT(DISTINCT rf.session_id) as follower_count
+      FROM ride_instances ri
+      JOIN routes r ON ri.route_id = r.id
+      LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
+      WHERE ri.status = 'live'
+        AND ri.region_id = $1
+        AND r.status = 'approved'
+      GROUP BY ri.id, r.id
+      ORDER BY ri.started_at DESC
+    `, [regionData.id]);
+
+    res.json({
+      success: true,
+      count: liveRides.length,
+      data: liveRides.map(ride => ({
+        ...ride,
+        follower_count: parseInt(ride.follower_count)
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error loading live rides:', error);
+    res.status(500).json({
+      error: 'Failed to load live rides',
+      message: error.message
+    });
+  }
+});
+
+/**
  * GET /api/rides
  * Browse upcoming ride instances (filtered by region)
  */
