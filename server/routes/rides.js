@@ -208,6 +208,72 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
+ * DELETE /api/rides/:id
+ * Delete a scheduled ride (requires access code)
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { access_code } = req.body;
+
+    if (!access_code) {
+      return res.status(400).json({
+        error: 'access_code is required'
+      });
+    }
+
+    // Verify access code and that ride belongs to this route
+    const ride = await queryOne(`
+      SELECT ri.*, r.access_code
+      FROM ride_instances ri
+      JOIN routes r ON ri.route_id = r.id
+      WHERE ri.id = $1
+    `, [id]);
+
+    if (!ride) {
+      return res.status(404).json({
+        error: 'Ride not found'
+      });
+    }
+
+    if (ride.access_code !== access_code) {
+      return res.status(403).json({
+        error: 'Invalid access code'
+      });
+    }
+
+    if (ride.status === 'live') {
+      return res.status(400).json({
+        error: 'Cannot delete a live ride. End the ride first.'
+      });
+    }
+
+    if (ride.status === 'completed') {
+      return res.status(400).json({
+        error: 'Cannot delete a completed ride'
+      });
+    }
+
+    // Delete the ride instance
+    await query(`DELETE FROM ride_instances WHERE id = $1`, [id]);
+
+    console.log(`🗑️  Ride ${id} deleted`);
+
+    res.json({
+      success: true,
+      message: 'Ride deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting ride:', error);
+    res.status(500).json({
+      error: 'Failed to delete ride',
+      message: error.message
+    });
+  }
+});
+
+/**
  * POST /api/rides/:id/interest
  * Express interest in a ride
  */

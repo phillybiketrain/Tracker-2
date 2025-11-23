@@ -151,6 +151,34 @@
       day: 'numeric'
     });
   }
+
+  async function deleteRide(rideId, rideDate) {
+    if (!confirm(`Delete the ride scheduled for ${formatDate(rideDate)}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/rides/${rideId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_code: accessCode })
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        error = data.error || 'Failed to delete ride';
+        return;
+      }
+
+      success = 'Ride deleted successfully';
+      await loadUpcomingRides();
+
+    } catch (err) {
+      error = 'Failed to delete ride';
+      console.error(err);
+    }
+  }
 </script>
 
 <svelte:head>
@@ -300,9 +328,15 @@
                         Live Now
                       </span>
                     {:else if ride.status === 'scheduled'}
-                      <a href="/lead?code={accessCode}" class="text-sm text-primary hover:underline">
+                      <a href="/broadcast?code={accessCode}" class="btn btn-primary text-xs px-3 py-1">
                         Start Ride
                       </a>
+                      <button
+                        on:click={() => deleteRide(ride.id, ride.scheduled_date)}
+                        class="text-sm text-red-600 hover:text-red-800"
+                      >
+                        Delete
+                      </button>
                     {/if}
                   </div>
                 </div>

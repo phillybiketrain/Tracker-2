@@ -14,14 +14,20 @@
 
         <!-- Desktop nav -->
         <div class="hidden md:flex gap-3">
-          <a href="/lead" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Create
+          <a href="/" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Browse
+          </a>
+          <a href="/live" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Live Now
+          </a>
+          <a href="/create" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Create Route
+          </a>
+          <a href="/manage" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            My Routes
           </a>
           <a href="/subscribe" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Subscribe
-          </a>
-          <a href="/follow" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Broadcast
           </a>
         </div>
 
@@ -44,14 +50,20 @@
       <!-- Mobile menu -->
       {#if mobileMenuOpen}
         <div class="md:hidden pt-4 pb-2 space-y-2">
-          <a href="/lead" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Create
+          <a href="/" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Browse
+          </a>
+          <a href="/live" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Live Now
+          </a>
+          <a href="/create" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Create Route
+          </a>
+          <a href="/manage" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            My Routes
           </a>
           <a href="/subscribe" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Subscribe
-          </a>
-          <a href="/follow" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Broadcast
           </a>
         </div>
       {/if}
