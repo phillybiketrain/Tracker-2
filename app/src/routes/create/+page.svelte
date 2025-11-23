@@ -314,7 +314,7 @@
           {#if activeStep === 2}
             <div class="mt-6">
               <div class="h-96 rounded-lg overflow-hidden mb-4">
-                <Map {waypoints} on:mapClick={(e) => handleMapClick(e.detail)} editable={true} />
+                <Map {waypoints} onMapClick={handleMapClick} />
               </div>
 
               <div class="flex gap-3 mb-4">
