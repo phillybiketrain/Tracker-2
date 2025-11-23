@@ -7,6 +7,12 @@
 
   let mapContainer;
   let map;
+  let loaded = false;
+
+  // TODO: For better performance, consider using Mapbox Static Images API
+  // to pre-generate route preview images at route creation time.
+  // This would eliminate the need for map initialization on page load.
+  // API: https://docs.mapbox.com/api/maps/static-images/
 
   onMount(() => {
     if (!waypoints || waypoints.length === 0) return;
@@ -69,6 +75,9 @@
       // Apply desaturation filter
       map.setPaintProperty('water', 'fill-color', '#d4d4d8');
       map.setPaintProperty('landuse', 'fill-opacity', 0.3);
+
+      // Fade in after map is fully loaded
+      loaded = true;
     });
   });
 
@@ -77,9 +86,18 @@
   });
 </script>
 
-<div bind:this={mapContainer} class="w-full h-full bg-warm-gray-100" />
+<div bind:this={mapContainer} class="w-full h-full bg-warm-gray-100 map-container" class:loaded />
 
 <style>
+  .map-container {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  .map-container.loaded {
+    opacity: 1;
+  }
+
   :global(.mapboxgl-ctrl-logo) {
     display: none !important;
   }

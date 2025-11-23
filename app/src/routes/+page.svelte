@@ -205,10 +205,10 @@
         {@const hasMore = route.rides.length > 1}
         {@const isOpen = openOverlay === route.id}
 
-        <a href="/ride/{nextRide.id}" class="card hover:shadow-md transition-all bg-white relative block cursor-pointer overflow-hidden p-0">
+        <a href="/ride/{nextRide.id}" class="card hover:shadow-md transition-all bg-white relative block cursor-pointer p-0">
           <!-- Route Map Preview -->
           {#if route.waypoints && route.waypoints.length > 0}
-            <div class="h-32 w-full">
+            <div class="h-32 w-full overflow-hidden">
               <RoutePreview waypoints={route.waypoints} />
             </div>
           {/if}
@@ -239,24 +239,20 @@
             </div>
 
             <!-- Next Ride Date -->
-            <div>
-              <div class="flex items-center gap-2 mb-2">
-                {#if nextRide.status === 'live'}
-                  <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                {:else}
-                  <div class="w-2 h-2 bg-warm-gray-300 rounded-full"></div>
-                {/if}
-                <div class="text-sm font-medium text-warm-gray-900">{formatDate(nextRide.date)}</div>
-              </div>
+            <div class="flex items-center gap-2">
+              {#if nextRide.status === 'live'}
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              {/if}
+              <div class="text-sm font-medium text-warm-gray-900">{formatDate(nextRide.date)}</div>
 
               {#if hasMore}
-                <div class="relative ml-4">
+                <div class="relative">
                   <button
                     on:click|preventDefault|stopPropagation={() => toggleOverlay(route.id)}
-                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-warm-gray-100 hover:bg-warm-gray-200 transition-colors"
+                    class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-warm-gray-100 hover:bg-warm-gray-200 transition-colors"
                     title="{route.rides.length - 1} more ride{route.rides.length - 1 !== 1 ? 's' : ''}"
                   >
-                    <svg class="w-4 h-4 text-warm-gray-700 transition-transform {isOpen ? 'rotate-45' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3 h-3 text-warm-gray-700 transition-transform {isOpen ? 'rotate-45' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
