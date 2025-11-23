@@ -14,6 +14,9 @@
   let rideInstances = [];
   let newRideDate = '';
   let addingRide = false;
+  let deleteConfirm = null; // Track which ride is being confirmed for deletion
+  let currentMonth = new Date();
+  let selectedDates = [];
 
   onMount(() => {
     token = localStorage.getItem('admin_token');
@@ -180,11 +183,17 @@
     }
   }
 
-  async function deleteRideInstance(rideId) {
-    if (!confirm('Delete this ride instance? This cannot be undone.')) {
-      return;
-    }
+  async function confirmDeleteRide(rideId) {
+    deleteConfirm = rideId;
+    error = '';
+    success = '';
+  }
 
+  function cancelDelete() {
+    deleteConfirm = null;
+  }
+
+  async function deleteRideInstance(rideId) {
     try {
       const res = await fetch(`${API_URL}/admin/rides/${rideId}`, {
         method: 'DELETE',
@@ -195,6 +204,7 @@
 
       if (!res.ok) {
         error = data.error || 'Failed to delete ride';
+        deleteConfirm = null;
         return;
       }
 
@@ -208,10 +218,108 @@
       }
 
       success = 'Ride deleted successfully';
+      deleteConfirm = null;
 
     } catch (err) {
       error = 'Failed to delete ride';
+      deleteConfirm = null;
       console.error(err);
+    }
+  }
+
+  function getCalendarDays() {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Get day of week for first day (0 = Sunday)
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Add empty slots for days before month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push({ date: null, dateStr: null, isPast: true });
+    }
+
+    // Add all days in month
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const date = new Date(year, month, day);
+      const dateStr = date.toISOString().split('T')[0];
+      const isPast = date < today;
+
+      days.push({ date, dateStr, isPast });
+    }
+
+    return days;
+  }
+
+  function nextMonth() {
+    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+  }
+
+  function prevMonth() {
+    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+  }
+
+  function toggleDate(dateStr) {
+    if (selectedDates.includes(dateStr)) {
+      selectedDates = selectedDates.filter(d => d !== dateStr);
+    } else {
+      selectedDates = [...selectedDates, dateStr];
+    }
+  }
+
+  async function addSelectedRides() {
+    if (selectedDates.length === 0 || !editing) {
+      return;
+    }
+
+    addingRide = true;
+    error = '';
+
+    try {
+      const res = await fetch(`${API_URL}/admin/rides`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          route_id: editing.id,
+          dates: selectedDates
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        error = data.error || 'Failed to add rides';
+        return;
+      }
+
+      // Reload ride instances
+      const ridesRes = await fetch(`${API_URL}/rides?route_id=${editing.id}&days=365`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const ridesData = await ridesRes.json();
+      if (ridesData.success) {
+        rideInstances = ridesData.data;
+      }
+
+      selectedDates = [];
+      success = `Added ${data.data.length} ride(s) successfully`;
+
+    } catch (err) {
+      error = 'Failed to add rides';
+      console.error(err);
+    } finally {
+      addingRide = false;
     }
   }
 
@@ -406,22 +514,76 @@
 
           <!-- Add New Ride Form -->
           <div class="mb-4 p-4 bg-warm-gray-50 rounded-lg">
-            <label class="block text-sm font-medium text-warm-gray-900 mb-2">Add New Ride</label>
-            <div class="flex gap-2">
-              <input
-                type="date"
-                bind:value={newRideDate}
-                min={new Date().toISOString().split('T')[0]}
-                class="flex-1 px-4 py-2 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+            <div class="flex items-center justify-between mb-3">
+              <label class="block text-sm font-medium text-warm-gray-900">Add Ride Dates</label>
+              {#if selectedDates.length > 0}
+                <span class="text-sm text-warm-gray-600">{selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} selected</span>
+              {/if}
+            </div>
+
+            <!-- Month Navigation -->
+            <div class="flex items-center justify-between mb-3">
               <button
-                on:click={addRideInstance}
-                disabled={!newRideDate || addingRide}
-                class="px-6 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+                on:click={prevMonth}
+                class="px-3 py-1 border border-warm-gray-300 rounded hover:bg-white text-sm font-medium"
               >
-                {addingRide ? 'Adding...' : 'Add Ride'}
+                ← Prev
+              </button>
+              <div class="font-medium text-warm-gray-900">
+                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
+              <button
+                on:click={nextMonth}
+                class="px-3 py-1 border border-warm-gray-300 rounded hover:bg-white text-sm font-medium"
+              >
+                Next →
               </button>
             </div>
+
+            <!-- Day Labels -->
+            <div class="grid grid-cols-7 gap-1 mb-2">
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Sun</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Mon</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Tue</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Wed</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Thu</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Fri</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Sat</div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="grid grid-cols-7 gap-1 mb-3">
+              {#each getCalendarDays() as day}
+                {#if day.date === null}
+                  <div class="aspect-square"></div>
+                {:else}
+                  <button
+                    on:click={() => toggleDate(day.dateStr)}
+                    disabled={day.isPast}
+                    class="aspect-square flex items-center justify-center text-sm rounded transition-colors {
+                      day.isPast
+                        ? 'text-warm-gray-300 cursor-not-allowed'
+                        : selectedDates.includes(day.dateStr)
+                        ? 'bg-primary text-white font-medium'
+                        : 'hover:bg-warm-gray-100 text-warm-gray-900'
+                    }"
+                  >
+                    {day.date.getDate()}
+                  </button>
+                {/if}
+              {/each}
+            </div>
+
+            <!-- Add Button -->
+            {#if selectedDates.length > 0}
+              <button
+                on:click={addSelectedRides}
+                disabled={addingRide}
+                class="w-full px-6 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+              >
+                {addingRide ? 'Adding...' : `Add ${selectedDates.length} Ride${selectedDates.length !== 1 ? 's' : ''}`}
+              </button>
+            {/if}
           </div>
 
           {#if success}
@@ -464,12 +626,27 @@
                     >
                       View
                     </a>
-                    <button
-                      on:click={() => deleteRideInstance(ride.id)}
-                      class="text-sm text-red-600 hover:text-red-700 font-medium"
-                    >
-                      Delete
-                    </button>
+                    {#if deleteConfirm === ride.id}
+                      <button
+                        on:click={() => deleteRideInstance(ride.id)}
+                        class="text-sm text-red-600 hover:text-red-700 font-medium"
+                      >
+                        Confirm Delete?
+                      </button>
+                      <button
+                        on:click={cancelDelete}
+                        class="text-sm text-warm-gray-600 hover:text-warm-gray-700 font-medium"
+                      >
+                        Cancel
+                      </button>
+                    {:else}
+                      <button
+                        on:click={() => confirmDeleteRide(ride.id)}
+                        class="text-sm text-red-600 hover:text-red-700 font-medium"
+                      >
+                        Delete
+                      </button>
+                    {/if}
                   </div>
                 </div>
               {/each}
