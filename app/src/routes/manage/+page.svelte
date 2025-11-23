@@ -313,7 +313,7 @@
                 <div class="flex items-center justify-between p-4 border border-warm-gray-200 rounded-lg hover:bg-warm-gray-50">
                   <div>
                     <div class="font-semibold text-warm-gray-900">
-                      {formatDate(ride.scheduled_date)}
+                      {formatDate(ride.date)}
                     </div>
                     <div class="text-sm text-warm-gray-600">
                       {ride.departure_time}
@@ -332,7 +332,7 @@
                         Start Ride
                       </a>
                       <button
-                        on:click={() => deleteRide(ride.id, ride.scheduled_date)}
+                        on:click={() => deleteRide(ride.id, ride.date)}
                         class="text-sm text-red-600 hover:text-red-800"
                       >
                         Delete

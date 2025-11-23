@@ -123,13 +123,13 @@
     }
   }
 
-  async function deleteUser(userId, userEmail) {
+  async function deleteUser(userEmail) {
     if (!confirm(`Remove admin access for ${userEmail}?`)) {
       return;
     }
 
     try {
-      const res = await fetch(`${API_URL}/admin/users/${userId}`, {
+      const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(userEmail)}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -298,7 +298,7 @@
                 </div>
 
                 <button
-                  on:click={() => deleteUser(user.id, user.email)}
+                  on:click={() => deleteUser(user.email)}
                   class="px-4 py-2 bg-red-100 text-red-700 text-sm font-medium rounded hover:bg-red-200"
                 >
                   Remove

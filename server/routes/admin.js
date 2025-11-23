@@ -68,12 +68,13 @@ router.post('/login', async (req, res) => {
         });
       }
 
-      // Create session for super admin
+      // Create session for super admin (30 days)
       const sessionToken = generateToken();
       activeSessions.set(sessionToken, {
         role: 'super',
         region_id: null,
-        created_at: Date.now()
+        created_at: Date.now(),
+        expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
       });
 
       return res.json({
@@ -93,13 +94,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Create session
+    // Create session (30 days)
     const sessionToken = generateToken();
     activeSessions.set(sessionToken, {
       role: admin.role,
       region_id: admin.region_id,
       email: admin.email,
-      created_at: Date.now()
+      created_at: Date.now(),
+      expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
     });
 
     res.json({
@@ -141,7 +143,17 @@ function requireAdmin(req, res, next) {
     });
   }
 
-  req.admin = activeSessions.get(token);
+  const session = activeSessions.get(token);
+
+  // Check if session has expired
+  if (session.expiresAt && Date.now() > session.expiresAt) {
+    activeSessions.delete(token);
+    return res.status(401).json({
+      error: 'Session expired'
+    });
+  }
+
+  req.admin = session;
   next();
 }
 
@@ -660,14 +672,14 @@ router.get('/users', requireAdmin, async (req, res) => {
       }
 
       users = await queryAll(`
-        SELECT id, email, role, region_id, created_at
+        SELECT email, role, region_id, created_at
         FROM admin_users
         WHERE region_id = $1
         ORDER BY created_at DESC
       `, [regionData.id]);
     } else {
       users = await queryAll(`
-        SELECT id, email, role, region_id, created_at
+        SELECT email, role, region_id, created_at
         FROM admin_users
         ORDER BY created_at DESC
       `);
@@ -736,7 +748,7 @@ router.post('/users', requireAdmin, async (req, res) => {
     const user = await queryOne(`
       INSERT INTO admin_users (email, password_hash, role, region_id)
       VALUES ($1, $2, $3, $4)
-      RETURNING id, email, role, region_id, created_at
+      RETURNING email, role, region_id, created_at
     `, [email, passwordHash, role, regionData.id]);
 
     console.log(`✅ Admin user created: ${email} for region ${region}`);
@@ -767,13 +779,13 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
       });
     }
 
-    const { id } = req.params;
+    const { id: email } = req.params; // id param is actually email
 
     const user = await queryOne(`
       DELETE FROM admin_users
-      WHERE id = $1
+      WHERE email = $1
       RETURNING email
-    `, [id]);
+    `, [email]);
 
     if (!user) {
       return res.status(404).json({
@@ -826,7 +838,7 @@ router.get('/routes/all', requireAdmin, async (req, res) => {
     const routes = await queryAll(`
       SELECT r.*,
         COUNT(DISTINCT ri.id) as scheduled_rides_count,
-        MAX(ri.scheduled_date) as last_ride_date
+        MAX(ri.date) as last_ride_date
       FROM routes r
       LEFT JOIN ride_instances ri ON r.id = ri.route_id
       WHERE r.region_id = $1

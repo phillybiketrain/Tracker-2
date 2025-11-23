@@ -134,7 +134,7 @@ export async function sendWeeklyDigest(subscriberId) {
       // Get all rides in region
       ridesQuery = `
         SELECT
-          ri.scheduled_date,
+          ri.date,
           ri.status,
           ro.name as route_name,
           ro.description,
@@ -144,10 +144,10 @@ export async function sendWeeklyDigest(subscriberId) {
         JOIN routes ro ON ri.route_id = ro.id
         WHERE ro.region_id = $1
           AND ro.status = 'approved'
-          AND ri.scheduled_date >= $2
-          AND ri.scheduled_date <= $3
+          AND ri.date >= $2
+          AND ri.date <= $3
           AND ri.status IN ('scheduled', 'live')
-        ORDER BY ri.scheduled_date, ro.departure_time
+        ORDER BY ri.date, ro.departure_time
       `;
       ridesParams = [subscriber.region_id, now.toISOString(), nextWeek.toISOString()];
 
@@ -155,7 +155,7 @@ export async function sendWeeklyDigest(subscriberId) {
       // Get rides for specific routes
       ridesQuery = `
         SELECT
-          ri.scheduled_date,
+          ri.date,
           ri.status,
           ro.name as route_name,
           ro.description,
@@ -165,10 +165,10 @@ export async function sendWeeklyDigest(subscriberId) {
         JOIN routes ro ON ri.route_id = ro.id
         WHERE ro.id = ANY($1)
           AND ro.status = 'approved'
-          AND ri.scheduled_date >= $2
-          AND ri.scheduled_date <= $3
+          AND ri.date >= $2
+          AND ri.date <= $3
           AND ri.status IN ('scheduled', 'live')
-        ORDER BY ri.scheduled_date, ro.departure_time
+        ORDER BY ri.date, ro.departure_time
       `;
       ridesParams = [subscriber.route_ids, now.toISOString(), nextWeek.toISOString()];
 
@@ -176,7 +176,7 @@ export async function sendWeeklyDigest(subscriberId) {
       // Get rides for specific tags
       ridesQuery = `
         SELECT
-          ri.scheduled_date,
+          ri.date,
           ri.status,
           ro.name as route_name,
           ro.description,
@@ -187,10 +187,10 @@ export async function sendWeeklyDigest(subscriberId) {
         WHERE ro.region_id = $1
           AND ro.tag = ANY($2)
           AND ro.status = 'approved'
-          AND ri.scheduled_date >= $3
-          AND ri.scheduled_date <= $4
+          AND ri.date >= $3
+          AND ri.date <= $4
           AND ri.status IN ('scheduled', 'live')
-        ORDER BY ri.scheduled_date, ro.departure_time
+        ORDER BY ri.date, ro.departure_time
       `;
       ridesParams = [subscriber.region_id, subscriber.tags, now.toISOString(), nextWeek.toISOString()];
 
@@ -211,7 +211,7 @@ export async function sendWeeklyDigest(subscriberId) {
     let ridesText = '\n\n';
 
     rides.forEach(ride => {
-      const date = new Date(ride.scheduled_date).toLocaleDateString('en-US', {
+      const date = new Date(ride.date).toLocaleDateString('en-US', {
         weekday: 'long',
         month: 'long',
         day: 'numeric'
