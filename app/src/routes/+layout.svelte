@@ -1,6 +1,37 @@
 <script>
   import '../app.css';
+  import { onMount } from 'svelte';
+  import { API_URL } from '$lib/config.js';
+
   let mobileMenuOpen = false;
+  let liveRidesCount = 0;
+  let liveSoon = false;
+
+  onMount(() => {
+    checkLiveRides();
+    // Check every 30 seconds
+    const interval = setInterval(checkLiveRides, 30000);
+    return () => clearInterval(interval);
+  });
+
+  async function checkLiveRides() {
+    try {
+      const res = await fetch(`${API_URL}/rides/live`);
+      const data = await res.json();
+      if (data.success) {
+        liveRidesCount = data.count;
+      }
+
+      // TODO: Check for rides starting soon (within 30 min)
+      // For now, just check live rides
+      liveSoon = false;
+    } catch (error) {
+      console.error('Error checking live rides:', error);
+    }
+  }
+
+  $: showLiveNav = liveRidesCount > 0 || liveSoon;
+  $: liveNavText = liveRidesCount > 0 ? 'Live Now' : 'Live Soon';
 </script>
 
 <div class="min-h-screen flex flex-col bg-cream">
@@ -17,9 +48,6 @@
           <a href="/" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Browse
           </a>
-          <a href="/live" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Live Now
-          </a>
           <a href="/create" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Create Route
           </a>
@@ -29,6 +57,12 @@
           <a href="/subscribe" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Subscribe
           </a>
+          {#if showLiveNav}
+            <a href="/live" class="px-4 py-2 rounded-full text-sm font-semibold text-white bg-green-500 hover:bg-green-600 transition-colors flex items-center gap-2 animate-pulse-gentle">
+              <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              {liveNavText}
+            </a>
+          {/if}
         </div>
 
         <!-- Mobile hamburger -->
@@ -53,9 +87,6 @@
           <a href="/" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Browse
           </a>
-          <a href="/live" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Live Now
-          </a>
           <a href="/create" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Create Route
           </a>
@@ -65,6 +96,12 @@
           <a href="/subscribe" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Subscribe
           </a>
+          {#if showLiveNav}
+            <a href="/live" class="block px-4 py-2 rounded-lg text-sm font-semibold text-white bg-green-500 hover:bg-green-600 transition-colors flex items-center gap-2">
+              <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              {liveNavText}
+            </a>
+          {/if}
         </div>
       {/if}
     </nav>
@@ -84,3 +121,18 @@
     </div>
   </footer>
 </div>
+
+<style>
+  @keyframes pulse-gentle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  :global(.animate-pulse-gentle) {
+    animation: pulse-gentle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+</style>
