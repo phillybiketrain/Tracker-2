@@ -13,6 +13,10 @@ import dotenv from 'dotenv';
 import routesRouter from './routes/routes.js';
 import ridesRouter from './routes/rides.js';
 import adminRouter from './routes/admin.js';
+import subscriptionsRouter from './routes/subscriptions.js';
+
+// Import scheduler
+import { startWeeklyDigestScheduler } from './services/scheduler.js';
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +52,7 @@ app.use((req, res, next) => {
 app.use('/api/routes', routesRouter);
 app.use('/api/rides', ridesRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/subscriptions', subscriptionsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -196,6 +201,9 @@ httpServer.listen(PORT, () => {
   console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   console.log('\n✅ Server ready!\n');
+
+  // Start weekly digest scheduler
+  startWeeklyDigestScheduler();
 });
 
 // Graceful shutdown

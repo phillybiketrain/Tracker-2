@@ -6,6 +6,8 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { query, queryOne, queryAll } from '../db/client.js';
+import { sendEmailBlast } from '../services/email.js';
+import { triggerWeeklyDigestForRegion } from '../services/scheduler.js';
 
 const router = express.Router();
 
@@ -472,15 +474,24 @@ router.post('/email/blast', requireAdmin, async (req, res) => {
       INSERT INTO email_blasts (region_id, admin_email, subject, body, recipient_count)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
-    `, [regionData.id, req.admin.email || 'super-admin', subject, body, parseInt(count)]);
+    `, [regionData.id, req.admin.email || 'super-admin', subject, body, 0]);
 
-    // TODO: Actually send emails via Mailgun
-    console.log(`📧 Email blast queued: ${subject} to ${count} subscribers`);
+    // Send emails via Mailgun
+    console.log(`📧 Sending email blast: ${subject} to subscribers in ${region}`);
+
+    // Send asynchronously
+    sendEmailBlast(blast.id)
+      .then(sentCount => {
+        console.log(`✅ Email blast complete: ${sentCount} emails sent`);
+      })
+      .catch(err => {
+        console.error(`❌ Email blast failed:`, err);
+      });
 
     res.json({
       success: true,
       data: blast,
-      message: `Email blast queued for ${count} subscribers`
+      message: `Email blast is being sent to all verified subscribers`
     });
 
   } catch (error) {
@@ -572,6 +583,51 @@ router.put('/email/templates/:id', requireAdmin, async (req, res) => {
     console.error('Error updating template:', error);
     res.status(500).json({
       error: 'Failed to update template',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/admin/email/send-digest
+ * Manually trigger weekly digest for testing
+ */
+router.post('/email/send-digest', requireAdmin, async (req, res) => {
+  try {
+    const { region = 'philly' } = req.body;
+
+    // Check access
+    const regionData = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [region]);
+
+    if (!regionData) {
+      return res.status(400).json({
+        error: 'Invalid region'
+      });
+    }
+
+    if (req.admin.role !== 'super' && req.admin.region_id !== regionData.id) {
+      return res.status(403).json({
+        error: 'Access denied to this region'
+      });
+    }
+
+    console.log(`🧪 Manually triggering weekly digest for ${region}`);
+
+    // Send digests
+    const sentCount = await triggerWeeklyDigestForRegion(region);
+
+    res.json({
+      success: true,
+      message: `Weekly digest sent to ${sentCount} subscribers`,
+      sent_count: sentCount
+    });
+
+  } catch (error) {
+    console.error('Error sending digest:', error);
+    res.status(500).json({
+      error: 'Failed to send digest',
       message: error.message
     });
   }
