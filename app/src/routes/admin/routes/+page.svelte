@@ -12,6 +12,8 @@
   let error = '';
   let success = '';
   let rideInstances = [];
+  let newRideDate = '';
+  let addingRide = false;
 
   onMount(() => {
     token = localStorage.getItem('admin_token');
@@ -127,6 +129,89 @@
       console.error(err);
     } finally {
       saving = false;
+    }
+  }
+
+  async function addRideInstance() {
+    if (!newRideDate || !editing) {
+      return;
+    }
+
+    addingRide = true;
+    error = '';
+
+    try {
+      const res = await fetch(`${API_URL}/admin/rides`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          route_id: editing.id,
+          dates: [newRideDate]
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        error = data.error || 'Failed to add ride';
+        return;
+      }
+
+      // Reload ride instances
+      const ridesRes = await fetch(`${API_URL}/rides?route_id=${editing.id}&days=365`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const ridesData = await ridesRes.json();
+      if (ridesData.success) {
+        rideInstances = ridesData.data;
+      }
+
+      newRideDate = '';
+      success = 'Ride added successfully';
+
+    } catch (err) {
+      error = 'Failed to add ride';
+      console.error(err);
+    } finally {
+      addingRide = false;
+    }
+  }
+
+  async function deleteRideInstance(rideId) {
+    if (!confirm('Delete this ride instance? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/admin/rides/${rideId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        error = data.error || 'Failed to delete ride';
+        return;
+      }
+
+      // Reload ride instances
+      const ridesRes = await fetch(`${API_URL}/rides?route_id=${editing.id}&days=365`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const ridesData = await ridesRes.json();
+      if (ridesData.success) {
+        rideInstances = ridesData.data;
+      }
+
+      success = 'Ride deleted successfully';
+
+    } catch (err) {
+      error = 'Failed to delete ride';
+      console.error(err);
     }
   }
 
@@ -314,9 +399,39 @@
         </div>
 
         <!-- Scheduled Ride Instances -->
-        {#if rideInstances.length > 0}
-          <div class="bg-white rounded-lg border border-warm-gray-200 p-6 mt-6">
-            <h3 class="text-lg font-bold text-warm-gray-900 mb-4">Scheduled Ride Instances ({rideInstances.length})</h3>
+        <div class="bg-white rounded-lg border border-warm-gray-200 p-6 mt-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-warm-gray-900">Scheduled Ride Instances ({rideInstances.length})</h3>
+          </div>
+
+          <!-- Add New Ride Form -->
+          <div class="mb-4 p-4 bg-warm-gray-50 rounded-lg">
+            <label class="block text-sm font-medium text-warm-gray-900 mb-2">Add New Ride</label>
+            <div class="flex gap-2">
+              <input
+                type="date"
+                bind:value={newRideDate}
+                min={new Date().toISOString().split('T')[0]}
+                class="flex-1 px-4 py-2 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <button
+                on:click={addRideInstance}
+                disabled={!newRideDate || addingRide}
+                class="px-6 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+              >
+                {addingRide ? 'Adding...' : 'Add Ride'}
+              </button>
+            </div>
+          </div>
+
+          {#if success}
+            <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+              {success}
+            </div>
+          {/if}
+
+          <!-- Ride Instances List -->
+          {#if rideInstances.length > 0}
             <div class="space-y-2 max-h-96 overflow-y-auto">
               {#each rideInstances as ride}
                 <div class="flex items-center justify-between p-3 border border-warm-gray-200 rounded hover:bg-warm-gray-50">
@@ -341,22 +456,30 @@
                       {/if}
                     </div>
                   </div>
-                  <a
-                    href="/ride/{ride.id}"
-                    target="_blank"
-                    class="text-sm text-primary hover:text-primary/80 font-medium"
-                  >
-                    View →
-                  </a>
+                  <div class="flex items-center gap-2">
+                    <a
+                      href="/ride/{ride.id}"
+                      target="_blank"
+                      class="text-sm text-primary hover:text-primary/80 font-medium"
+                    >
+                      View
+                    </a>
+                    <button
+                      on:click={() => deleteRideInstance(ride.id)}
+                      class="text-sm text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               {/each}
             </div>
-          </div>
-        {:else}
-          <div class="bg-white rounded-lg border border-warm-gray-200 p-6 mt-6 text-center">
-            <p class="text-warm-gray-500">No scheduled ride instances for this route</p>
-          </div>
-        {/if}
+          {:else}
+            <div class="text-center py-8">
+              <p class="text-warm-gray-500">No scheduled ride instances for this route</p>
+            </div>
+          {/if}
+        </div>
       </div>
     {:else}
       <!-- Routes List -->

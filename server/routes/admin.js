@@ -967,6 +967,125 @@ router.delete('/routes/:id', requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/admin/rides
+ * Create new ride instances for a route
+ */
+router.post('/rides', requireAdmin, async (req, res) => {
+  try {
+    const { route_id, dates } = req.body;
+
+    if (!route_id || !dates || !Array.isArray(dates) || dates.length === 0) {
+      return res.status(400).json({
+        error: 'route_id and dates array are required'
+      });
+    }
+
+    // Get route to check access
+    const route = await queryOne(`
+      SELECT id, region_id FROM routes WHERE id = $1
+    `, [route_id]);
+
+    if (!route) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== route.region_id) {
+      return res.status(403).json({
+        error: 'Access denied to this region'
+      });
+    }
+
+    // Create ride instances for each date
+    const instances = [];
+
+    for (const date of dates) {
+      // Check if instance already exists
+      const existing = await queryOne(`
+        SELECT id FROM ride_instances
+        WHERE route_id = $1 AND date = $2
+      `, [route.id, date]);
+
+      if (existing) {
+        continue; // Skip if already scheduled
+      }
+
+      // Create instance
+      const instance = await queryOne(`
+        INSERT INTO ride_instances (
+          route_id, date, status, region_id
+        )
+        VALUES ($1, $2, 'scheduled', $3)
+        RETURNING *
+      `, [route.id, date, route.region_id]);
+
+      instances.push(instance);
+    }
+
+    res.json({
+      success: true,
+      message: `Created ${instances.length} ride instance(s)`,
+      data: instances
+    });
+
+  } catch (error) {
+    console.error('Error creating ride instances:', error);
+    res.status(500).json({
+      error: 'Failed to create ride instances',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/admin/rides/:id
+ * Delete a ride instance
+ */
+router.delete('/rides/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get ride instance to check access
+    const ride = await queryOne(`
+      SELECT ri.*, r.region_id
+      FROM ride_instances ri
+      JOIN routes r ON ri.route_id = r.id
+      WHERE ri.id = $1
+    `, [id]);
+
+    if (!ride) {
+      return res.status(404).json({
+        error: 'Ride instance not found'
+      });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== ride.region_id) {
+      return res.status(403).json({
+        error: 'Access denied to this region'
+      });
+    }
+
+    // Delete the ride instance
+    await query(`DELETE FROM ride_instances WHERE id = $1`, [id]);
+
+    res.json({
+      success: true,
+      message: 'Ride instance deleted'
+    });
+
+  } catch (error) {
+    console.error('Error deleting ride instance:', error);
+    res.status(500).json({
+      error: 'Failed to delete ride instance',
+      message: error.message
+    });
+  }
+});
+
 // Helper function to generate session token
 function generateToken() {
   return Array.from({ length: 32 }, () =>
