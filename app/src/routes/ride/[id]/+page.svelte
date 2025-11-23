@@ -162,14 +162,14 @@
   {:else if !ride}
     <div class="card text-center max-w-md mx-auto py-12">
       <h2 class="text-3xl font-bold mb-4 text-warm-gray-900">Ride Not Found</h2>
-      <a href="/browse" class="btn btn-primary">Browse Rides</a>
+      <a href="/" class="btn btn-primary">Browse Rides</a>
     </div>
 
   {:else if !tracking}
     <!-- Ride Details View -->
     <div class="max-w-5xl mx-auto">
       <div class="mb-6">
-        <a href="/browse" class="text-primary hover:text-secondary font-medium mb-3 inline-block">← Back to Browse</a>
+        <a href="/" class="text-primary hover:text-secondary font-medium mb-3 inline-block">← Back to Browse</a>
         <div class="flex items-start justify-between gap-4 mb-3">
           <h1 class="text-4xl font-bold text-warm-gray-900">{ride.route_name}</h1>
           {#if ride.status === 'live'}
@@ -236,7 +236,7 @@
             </button>
           {/if}
 
-          <a href="/browse" class="btn btn-secondary w-full block text-center">
+          <a href="/" class="btn btn-secondary w-full block text-center">
             Back to Browse
           </a>
         </div>

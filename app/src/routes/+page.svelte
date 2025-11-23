@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { API_URL } from '$lib/config.js';
+  import RoutePreview from '$lib/components/RoutePreview.svelte';
 
   let rides = [];
   let routes = []; // Grouped by route
@@ -204,89 +205,86 @@
         {@const hasMore = route.rides.length > 1}
         {@const isOpen = openOverlay === route.id}
 
-        <div class="card hover:shadow-md transition-all bg-white relative">
-          <!-- Action Buttons - Top Right -->
-          <div class="absolute top-4 right-4 flex gap-2">
-            {#if nextRide.status === 'live'}
-              <a href="/ride/{nextRide.id}" class="btn btn-primary text-xs px-3 py-1">
-                Track Live
-              </a>
-            {:else}
-              <button on:click={() => expressInterest(nextRide.id)} class="btn btn-secondary text-xs px-3 py-1">
-                Interested
-              </button>
-              <a href="/ride/{nextRide.id}" class="btn btn-primary text-xs px-3 py-1">
-                Details
-              </a>
-            {/if}
-          </div>
+        <a href="/ride/{nextRide.id}" class="card hover:shadow-md transition-all bg-white relative block cursor-pointer overflow-hidden p-0">
+          <!-- Route Map Preview -->
+          {#if route.waypoints && route.waypoints.length > 0}
+            <div class="h-32 w-full">
+              <RoutePreview waypoints={route.waypoints} />
+            </div>
+          {/if}
 
-          <!-- Route Name -->
-          <div class="mb-4 pr-32">
-            <h3 class="text-lg font-bold text-warm-gray-900">{route.name}</h3>
-          </div>
-
-          <!-- Departure Info -->
-          <div class="flex items-center gap-3 text-sm text-warm-gray-900 mb-4">
-            <div class="font-medium">{formatTime(route.departure_time)}</div>
-            {#if route.estimated_duration}
-              <div class="text-warm-gray-400">•</div>
-              <div class="text-warm-gray-600">{route.estimated_duration}</div>
-            {/if}
-          </div>
-
-          <!-- Next Ride Date -->
-          <div class="mb-2">
-            <div class="flex items-center gap-2 mb-2">
+          <!-- Card Content -->
+          <div class="p-6">
+            <!-- Action Button - Top Right -->
+            <div class="absolute top-4 right-4 z-10">
               {#if nextRide.status === 'live'}
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="btn btn-primary text-xs px-3 py-1 pointer-events-none shadow-md">
+                  Track Live
+                </span>
               {:else}
-                <div class="w-2 h-2 bg-warm-gray-300 rounded-full"></div>
+                <button
+                  on:click|preventDefault|stopPropagation={() => expressInterest(nextRide.id)}
+                  class="btn btn-secondary text-xs px-3 py-1 shadow-md"
+                >
+                  Interested
+                </button>
               {/if}
-              <div class="text-sm font-medium text-warm-gray-900">{formatDate(nextRide.date)}</div>
             </div>
 
-            {#if hasMore}
-              <div class="relative ml-4">
-                <button
-                  on:click|stopPropagation={() => toggleOverlay(route.id)}
-                  class="text-sm text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1"
-                >
-                  +{route.rides.length - 1} more
-                  <svg class="w-3 h-3 transition-transform {isOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+            <!-- Route Name -->
+            <div class="mb-3 pr-24">
+              <h3 class="text-lg font-bold text-warm-gray-900">{route.name}</h3>
+            </div>
 
-                <!-- Overlay Tooltip -->
-                {#if isOpen}
-                  <div class="overlay-tooltip" on:click|stopPropagation>
-                    <div class="space-y-2">
-                      {#each route.rides.slice(1) as ride (ride.id)}
-                        <div class="text-sm text-warm-gray-900">
-                          {formatDate(ride.date)}
-                        </div>
-                      {/each}
-                    </div>
-                  </div>
+            <!-- Departure Info -->
+            <div class="flex items-center gap-3 text-sm text-warm-gray-900 mb-3">
+              <div class="font-medium">{formatTime(route.departure_time)}</div>
+              {#if route.estimated_duration}
+                <div class="text-warm-gray-400">•</div>
+                <div class="text-warm-gray-600">{route.estimated_duration}</div>
+              {/if}
+            </div>
+
+            <!-- Next Ride Date -->
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                {#if nextRide.status === 'live'}
+                  <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                {:else}
+                  <div class="w-2 h-2 bg-warm-gray-300 rounded-full"></div>
                 {/if}
+                <div class="text-sm font-medium text-warm-gray-900">{formatDate(nextRide.date)}</div>
               </div>
-            {/if}
-          </div>
 
-          <!-- View Route Link -->
-          {#if route.waypoints && route.waypoints.length > 0}
-            <a
-              href="/ride/{nextRide.id}"
-              class="mt-4 pt-4 border-t border-warm-gray-100 w-full text-sm text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              View route
-            </a>
-          {/if}
-        </div>
+              {#if hasMore}
+                <div class="relative ml-4">
+                  <button
+                    on:click|preventDefault|stopPropagation={() => toggleOverlay(route.id)}
+                    class="text-sm text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1"
+                  >
+                    +{route.rides.length - 1} more
+                    <svg class="w-3 h-3 transition-transform {isOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  <!-- Overlay Tooltip -->
+                  {#if isOpen}
+                    <div class="overlay-tooltip" on:click|stopPropagation>
+                      <div class="space-y-2">
+                        {#each route.rides.slice(1) as ride (ride.id)}
+                          <div class="text-sm text-warm-gray-900">
+                            {formatDate(ride.date)}
+                          </div>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          </div>
+        </a>
       {/each}
     </div>
 
