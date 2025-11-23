@@ -6,8 +6,11 @@
   let rides = [];
   let routes = []; // Grouped by route
   let loading = true;
-  let filter = 'week'; // today | tomorrow | week
+  let filter = 'week'; // today | tomorrow | week | all
   let openOverlay = null; // Track which route overlay is open
+  let currentPage = 1;
+  let pageSize = 12;
+  let totalRoutes = 0;
 
   function toggleOverlay(routeId) {
     if (openOverlay === routeId) {
@@ -37,12 +40,14 @@
         days = 1;
       } else if (filter === 'week') {
         days = 7;
+      } else if (filter === 'all') {
+        days = 365; // Load all upcoming rides for the year
       }
 
       const fromStr = fromDate.toISOString().split('T')[0];
 
       const res = await fetch(
-        `${API_URL}/rides?from_date=${fromStr}&days=${days}&limit=50`
+        `${API_URL}/rides?from_date=${fromStr}&days=${days}&limit=500`
       );
 
       const data = await res.json();
@@ -63,13 +68,20 @@
               waypoints: ride.waypoints,
               departure_time: ride.departure_time,
               estimated_duration: ride.estimated_duration,
+              preview_image_url: ride.preview_image_url,
               rides: []
             });
           }
           routeMap.get(routeId).rides.push(ride);
         });
 
-        routes = Array.from(routeMap.values());
+        const allRoutes = Array.from(routeMap.values());
+        totalRoutes = allRoutes.length;
+
+        // Paginate routes
+        const startIdx = (currentPage - 1) * pageSize;
+        const endIdx = startIdx + pageSize;
+        routes = allRoutes.slice(startIdx, endIdx);
       }
 
     } catch (error) {
@@ -138,9 +150,19 @@
   }
 
   $: {
-    // Reload rides when filter changes
+    // Reset to page 1 and reload rides when filter changes
+    currentPage = 1;
     loadRides();
   }
+
+  function goToPage(page) {
+    currentPage = page;
+    loadRides();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  $: totalPages = Math.ceil(totalRoutes / pageSize);
+  $: pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 </script>
 
 <svelte:head>
@@ -156,7 +178,7 @@
     <h1 class="text-4xl font-bold mb-6 text-warm-gray-900">Browse Routes</h1>
 
     <!-- Filters -->
-    <div class="flex gap-3">
+    <div class="flex gap-3 flex-wrap">
       <button
         on:click={() => filter = 'today'}
         class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'today' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
@@ -174,6 +196,12 @@
         class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'week' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
       >
         This Week
+      </button>
+      <button
+        on:click={() => filter = 'all'}
+        class="px-6 py-3 rounded-2xl font-medium transition-all {filter === 'all' ? 'bg-primary text-white shadow-sm' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
+      >
+        All Rides
       </button>
     </div>
   </div>
@@ -277,8 +305,47 @@
       {/each}
     </div>
 
-    <p class="text-center text-warm-gray-500 mt-8 text-sm">
-      Showing {routes.length} route{routes.length !== 1 ? 's' : ''} with {rides.length} upcoming ride{rides.length !== 1 ? 's' : ''}
+    <!-- Pagination -->
+    {#if totalPages > 1}
+      <div class="mt-12 flex justify-center items-center gap-2">
+        <button
+          on:click={() => goToPage(currentPage - 1)}
+          disabled={currentPage === 1}
+          class="px-4 py-2 rounded-lg border border-warm-gray-200 text-warm-gray-700 hover:bg-warm-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+        >
+          Previous
+        </button>
+
+        <div class="flex gap-1">
+          {#each pageNumbers as pageNum}
+            {#if pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)}
+              <button
+                on:click={() => goToPage(pageNum)}
+                class="w-10 h-10 rounded-lg font-medium transition-all {currentPage === pageNum ? 'bg-primary text-white' : 'bg-white text-warm-gray-700 hover:bg-warm-gray-50 border border-warm-gray-200'}"
+              >
+                {pageNum}
+              </button>
+            {:else if pageNum === currentPage - 3 || pageNum === currentPage + 3}
+              <span class="w-10 h-10 flex items-center justify-center text-warm-gray-400">...</span>
+            {/if}
+          {/each}
+        </div>
+
+        <button
+          on:click={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          class="px-4 py-2 rounded-lg border border-warm-gray-200 text-warm-gray-700 hover:bg-warm-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+        >
+          Next
+        </button>
+      </div>
+    {/if}
+
+    <p class="text-center text-warm-gray-500 mt-6 text-sm">
+      Showing {routes.length} of {totalRoutes} route{totalRoutes !== 1 ? 's' : ''}
+      {#if totalPages > 1}
+        (Page {currentPage} of {totalPages})
+      {/if}
     </p>
   {/if}
 

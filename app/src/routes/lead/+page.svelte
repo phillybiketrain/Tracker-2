@@ -197,11 +197,23 @@
   function getNext30Days() {
     const dates = [];
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of day
 
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push(date.toISOString().split('T')[0]);
+    // Find the Sunday before or on today
+    const startDate = new Date(today);
+    const dayOfWeek = startDate.getDay(); // 0 = Sunday, 6 = Saturday
+    startDate.setDate(startDate.getDate() - dayOfWeek);
+
+    // Generate 42 days (6 weeks) to fill calendar grid
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      dates.push({
+        dateStr: date.toISOString().split('T')[0],
+        dateObj: date,
+        isPast: date < today,
+        isToday: date.toDateString() === today.toDateString()
+      });
     }
 
     return dates;
@@ -430,19 +442,33 @@
           <div class="px-6 pb-6 pt-2 border-t border-warm-gray-100 accordion-content">
             <p class="mb-4 text-gray-600">Select dates (you can select multiple):</p>
 
-            <div class="grid grid-cols-7 gap-2 mb-6">
-              {#each getNext30Days() as date}
-                {@const isSelected = selectedDates.includes(date)}
-                {@const dateObj = new Date(date)}
+            <div class="mb-6">
+              <!-- Day labels -->
+              <div class="grid grid-cols-7 gap-2 mb-2">
+                <div class="text-center text-xs font-semibold text-warm-gray-600">Sun</div>
+                <div class="text-center text-xs font-semibold text-warm-gray-600">Mon</div>
+                <div class="text-center text-xs font-semibold text-warm-gray-600">Tue</div>
+                <div class="text-center text-xs font-semibold text-warm-gray-600">Wed</div>
+                <div class="text-center text-xs font-semibold text-warm-gray-600">Thu</div>
+                <div class="text-center text-xs font-semibold text-warm-gray-600">Fri</div>
+                <div class="text-center text-xs font-semibold text-warm-gray-600">Sat</div>
+              </div>
 
-                <button
-                  on:click={() => toggleDate(date)}
-                  class="p-2 rounded text-sm border transition-colors {isSelected ? 'bg-primary text-white border-primary' : 'hover:border-primary'}"
-                >
-                  <div class="font-bold">{dateObj.getDate()}</div>
-                  <div class="text-xs">{dateObj.toLocaleDateString('en-US', { month: 'short' })}</div>
-                </button>
-              {/each}
+              <!-- Calendar grid -->
+              <div class="grid grid-cols-7 gap-2">
+                {#each getNext30Days() as { dateStr, dateObj, isPast, isToday }}
+                  {@const isSelected = selectedDates.includes(dateStr)}
+
+                  <button
+                    on:click={() => !isPast && toggleDate(dateStr)}
+                    disabled={isPast}
+                    class="p-2 rounded text-sm border transition-colors {isSelected ? 'bg-primary text-white border-primary' : isToday ? 'border-primary border-2 font-bold' : isPast ? 'opacity-30 cursor-not-allowed' : 'hover:border-primary'}"
+                  >
+                    <div class="font-bold">{dateObj.getDate()}</div>
+                    <div class="text-xs">{dateObj.toLocaleDateString('en-US', { month: 'short' })}</div>
+                  </button>
+                {/each}
+              </div>
             </div>
 
             {#if selectedDates.length > 0}

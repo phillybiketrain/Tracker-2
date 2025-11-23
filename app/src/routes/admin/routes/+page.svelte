@@ -59,7 +59,8 @@
       description: route.description,
       departure_time: route.departure_time,
       estimated_duration: route.estimated_duration,
-      tag: route.tag
+      tag: route.tag,
+      access_code: route.access_code
     };
     error = '';
     success = '';
@@ -204,6 +205,19 @@
             <h2 class="text-lg font-bold text-warm-gray-900 mb-1">
               Edit Route
             </h2>
+            {#if editing.access_code}
+              <div class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-warm-gray-50 rounded-lg">
+                <span class="text-sm text-warm-gray-600 font-medium">Access Code:</span>
+                <span class="text-base font-mono font-bold text-primary">{editing.access_code}</span>
+                <button
+                  on:click={() => navigator.clipboard.writeText(editing.access_code)}
+                  class="ml-2 text-xs px-2 py-1 bg-white border border-warm-gray-200 rounded hover:bg-warm-gray-50"
+                  title="Copy access code"
+                >
+                  Copy
+                </button>
+              </div>
+            {/if}
           </div>
 
           <div class="space-y-4 mb-6">

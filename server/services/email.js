@@ -85,7 +85,8 @@ export async function sendConfirmationEmail(subscriberId) {
 
     // Send email
     await transporter.sendMail({
-      from: process.env.MAILGUN_FROM_EMAIL || 'noreply@biketrain.org',
+      from: process.env.FROM_EMAIL || 'noreply@biketrain.org',
+      replyTo: 'phillybiketrain@gmail.com',
       to: subscriber.email,
       subject,
       text: textBody,
@@ -255,7 +256,8 @@ export async function sendWeeklyDigest(subscriberId) {
 
     // Send email
     await transporter.sendMail({
-      from: process.env.MAILGUN_FROM_EMAIL || 'noreply@biketrain.org',
+      from: process.env.FROM_EMAIL || 'noreply@biketrain.org',
+      replyTo: 'phillybiketrain@gmail.com',
       to: subscriber.email,
       subject,
       text: textBody.replace('{{routes}}', ridesText),
@@ -322,7 +324,8 @@ export async function sendEmailBlast(blastId) {
         const finalSubject = blast.subject || subject;
 
         await transporter.sendMail({
-          from: process.env.MAILGUN_FROM_EMAIL || 'noreply@biketrain.org',
+          from: process.env.FROM_EMAIL || 'noreply@biketrain.org',
+          replyTo: 'phillybiketrain@gmail.com',
           to: subscriber.email,
           subject: finalSubject,
           text: textBody,

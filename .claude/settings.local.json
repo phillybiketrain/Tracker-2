@@ -33,7 +33,11 @@
       "Bash(cmd /c \"where node\")",
       "Bash(npm run db:migrate:*)",
       "Bash(node db/migrate.js:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(node -e:*)",
+      "Bash(git reset:*)",
+      "Bash(git mv:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
