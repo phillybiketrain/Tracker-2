@@ -1,21 +1,20 @@
 /**
- * Email Service using Mailgun SMTP
+ * Email Service using Mailgun HTTP API
  * Handles template rendering and email sending
  */
 
-import nodemailer from 'nodemailer';
+import formData from 'form-data';
+import Mailgun from 'mailgun.js';
 import { query, queryOne, queryAll } from '../db/client.js';
 
-// Create Mailgun SMTP transport
-const transporter = nodemailer.createTransport({
-  host: 'smtp.mailgun.org',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.MAILGUN_SMTP_USER,
-    pass: process.env.MAILGUN_SMTP_PASSWORD
-  }
+// Initialize Mailgun client
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+  username: 'api',
+  key: process.env.MAILGUN_API_KEY
 });
+
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
 
 /**
  * Get email template for a region
@@ -83,10 +82,10 @@ export async function sendConfirmationEmail(subscriberId) {
       region_name: subscriber.region_name
     });
 
-    // Send email
-    await transporter.sendMail({
+    // Send email via Mailgun HTTP API
+    await mg.messages.create(MAILGUN_DOMAIN, {
       from: process.env.FROM_EMAIL || 'noreply@biketrain.org',
-      replyTo: 'phillybiketrain@gmail.com',
+      'h:Reply-To': 'phillybiketrain@gmail.com',
       to: subscriber.email,
       subject,
       text: textBody,
@@ -254,10 +253,10 @@ export async function sendWeeklyDigest(subscriberId) {
       region_name: subscriber.region_name
     });
 
-    // Send email
-    await transporter.sendMail({
+    // Send email via Mailgun HTTP API
+    await mg.messages.create(MAILGUN_DOMAIN, {
       from: process.env.FROM_EMAIL || 'noreply@biketrain.org',
-      replyTo: 'phillybiketrain@gmail.com',
+      'h:Reply-To': 'phillybiketrain@gmail.com',
       to: subscriber.email,
       subject,
       text: textBody.replace('{{routes}}', ridesText),
@@ -323,9 +322,9 @@ export async function sendEmailBlast(blastId) {
         // Use custom subject if provided, otherwise use template subject
         const finalSubject = blast.subject || subject;
 
-        await transporter.sendMail({
+        await mg.messages.create(MAILGUN_DOMAIN, {
           from: process.env.FROM_EMAIL || 'noreply@biketrain.org',
-          replyTo: 'phillybiketrain@gmail.com',
+          'h:Reply-To': 'phillybiketrain@gmail.com',
           to: subscriber.email,
           subject: finalSubject,
           text: textBody,
