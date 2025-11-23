@@ -96,12 +96,12 @@
     if (map) map.remove();
   });
 
-  // Smooth path using Catmull-Rom splines
+  // Smooth path using Catmull-Rom splines with reduced smoothing
   function smoothPath(points) {
     if (points.length < 3) return points;
 
     const smoothed = [];
-    const segments = 10; // Number of points between each waypoint
+    const segments = 3; // Reduced from 10 to 3 for subtler smoothing
 
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[Math.max(0, i - 1)];
