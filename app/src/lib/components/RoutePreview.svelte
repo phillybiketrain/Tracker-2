@@ -43,14 +43,12 @@
     map.on('load', () => {
       // Add route line
       if (waypoints.length >= 2) {
-        // Use smoothed path for better visual appearance
-        const pathPoints = waypoints.length >= 3 ? smoothPath(waypoints) : waypoints;
-
+        // Use waypoints directly - no smoothing to avoid curve overshoot
         const routeData = {
           type: 'Feature',
           geometry: {
             type: 'LineString',
-            coordinates: pathPoints.map(wp => [wp.lng, wp.lat])
+            coordinates: waypoints.map(wp => [wp.lng, wp.lat])
           }
         };
 
@@ -95,49 +93,6 @@
   onDestroy(() => {
     if (map) map.remove();
   });
-
-  // Smooth path using Catmull-Rom splines with reduced smoothing
-  function smoothPath(points) {
-    if (points.length < 3) return points;
-
-    const smoothed = [];
-    const segments = 3; // Reduced from 10 to 3 for subtler smoothing
-
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[Math.max(0, i - 1)];
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const p3 = points[Math.min(points.length - 1, i + 2)];
-
-      for (let t = 0; t < segments; t++) {
-        const tNorm = t / segments;
-        const tSquared = tNorm * tNorm;
-        const tCubed = tSquared * tNorm;
-
-        // Catmull-Rom spline formula
-        const lng = 0.5 * (
-          (2 * p1.lng) +
-          (-p0.lng + p2.lng) * tNorm +
-          (2 * p0.lng - 5 * p1.lng + 4 * p2.lng - p3.lng) * tSquared +
-          (-p0.lng + 3 * p1.lng - 3 * p2.lng + p3.lng) * tCubed
-        );
-
-        const lat = 0.5 * (
-          (2 * p1.lat) +
-          (-p0.lat + p2.lat) * tNorm +
-          (2 * p0.lat - 5 * p1.lat + 4 * p2.lat - p3.lat) * tSquared +
-          (-p0.lat + 3 * p1.lat - 3 * p2.lat + p3.lat) * tCubed
-        );
-
-        smoothed.push({ lng, lat });
-      }
-    }
-
-    // Add the final point
-    smoothed.push(points[points.length - 1]);
-
-    return smoothed;
-  }
 </script>
 
 {#if previewImageUrl}
