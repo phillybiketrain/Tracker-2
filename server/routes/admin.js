@@ -8,6 +8,7 @@ import bcrypt from 'bcrypt';
 import { query, queryOne, queryAll } from '../db/client.js';
 import { sendEmailBlast } from '../services/email.js';
 import { triggerWeeklyDigestForRegion } from '../services/scheduler.js';
+import { upload, uploadToCloudinary, deleteFromCloudinary } from '../utils/upload.js';
 
 const router = express.Router();
 
@@ -1081,6 +1082,139 @@ router.delete('/rides/:id', requireAdmin, async (req, res) => {
     console.error('Error deleting ride instance:', error);
     res.status(500).json({
       error: 'Failed to delete ride instance',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/admin/routes/:routeId/upload-icon
+ * Upload or update start location icon for a route (admin only)
+ */
+router.post('/routes/:routeId/upload-icon', requireAdmin, upload.single('icon'), async (req, res) => {
+  try {
+    const { routeId } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'No file uploaded'
+      });
+    }
+
+    // Get route with region check
+    const route = await queryOne(`
+      SELECT r.*, reg.name as region_name
+      FROM routes r
+      JOIN regions reg ON r.region_id = reg.id
+      WHERE r.id = $1
+    `, [routeId]);
+
+    if (!route) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    // Check region access
+    const hasAccess = await checkRegionAccess(req.session.userId, route.region_id);
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: `You do not have access to the ${route.region_name} region`
+      });
+    }
+
+    // Upload to Cloudinary
+    const iconUrl = await uploadToCloudinary(req.file.buffer, 'route-icons');
+
+    // Delete old icon if exists
+    if (route.start_location_icon_url) {
+      await deleteFromCloudinary(route.start_location_icon_url);
+    }
+
+    // Update route with new icon URL
+    await query(`
+      UPDATE routes
+      SET start_location_icon_url = $1
+      WHERE id = $2
+    `, [iconUrl, route.id]);
+
+    console.log(`🎨 Admin updated icon for route: ${route.name}`);
+
+    res.json({
+      success: true,
+      data: {
+        start_location_icon_url: iconUrl
+      }
+    });
+
+  } catch (error) {
+    console.error('Error uploading icon:', error);
+    res.status(500).json({
+      error: 'Failed to upload icon',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/admin/routes/:routeId/icon
+ * Remove start location icon from a route (admin only)
+ */
+router.delete('/routes/:routeId/icon', requireAdmin, async (req, res) => {
+  try {
+    const { routeId } = req.params;
+
+    // Get route with region check
+    const route = await queryOne(`
+      SELECT r.*, reg.name as region_name
+      FROM routes r
+      JOIN regions reg ON r.region_id = reg.id
+      WHERE r.id = $1
+    `, [routeId]);
+
+    if (!route) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    // Check region access
+    const hasAccess = await checkRegionAccess(req.session.userId, route.region_id);
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: `You do not have access to the ${route.region_name} region`
+      });
+    }
+
+    if (!route.start_location_icon_url) {
+      return res.status(400).json({
+        error: 'Route has no custom icon'
+      });
+    }
+
+    // Delete from Cloudinary
+    await deleteFromCloudinary(route.start_location_icon_url);
+
+    // Remove from database
+    await query(`
+      UPDATE routes
+      SET start_location_icon_url = NULL
+      WHERE id = $1
+    `, [route.id]);
+
+    console.log(`🗑️  Admin removed icon from route: ${route.name}`);
+
+    res.json({
+      success: true,
+      message: 'Icon removed successfully'
+    });
+
+  } catch (error) {
+    console.error('Error removing icon:', error);
+    res.status(500).json({
+      error: 'Failed to remove icon',
       message: error.message
     });
   }

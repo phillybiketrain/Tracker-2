@@ -7,6 +7,7 @@ import express from 'express';
 import { query, queryOne, queryAll } from '../db/client.js';
 import { z } from 'zod';
 import { generateRoutePreviewUrl } from '../utils/mapbox.js';
+import { upload, uploadToCloudinary, deleteFromCloudinary } from '../utils/upload.js';
 
 const router = express.Router();
 
@@ -287,6 +288,118 @@ router.get('/:accessCode/next-ride', async (req, res) => {
     console.error('Error fetching next ride:', error);
     res.status(500).json({
       error: 'Failed to fetch next ride',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/routes/:accessCode/upload-icon
+ * Upload custom start location icon for a route
+ */
+router.post('/:accessCode/upload-icon', upload.single('icon'), async (req, res) => {
+  try {
+    const { accessCode } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'No file uploaded'
+      });
+    }
+
+    // Get route
+    const route = await queryOne(`
+      SELECT * FROM routes
+      WHERE access_code = $1
+    `, [accessCode.toUpperCase()]);
+
+    if (!route) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    // Upload to Cloudinary
+    const iconUrl = await uploadToCloudinary(req.file.buffer, 'route-icons');
+
+    // Delete old icon if exists
+    if (route.start_location_icon_url) {
+      await deleteFromCloudinary(route.start_location_icon_url);
+    }
+
+    // Update route with new icon URL
+    const updatedRoute = await queryOne(`
+      UPDATE routes
+      SET start_location_icon_url = $1
+      WHERE id = $2
+      RETURNING *
+    `, [iconUrl, route.id]);
+
+    console.log(`🎨 Icon uploaded for route: ${route.name}`);
+
+    res.json({
+      success: true,
+      data: {
+        start_location_icon_url: iconUrl
+      }
+    });
+
+  } catch (error) {
+    console.error('Error uploading icon:', error);
+    res.status(500).json({
+      error: 'Failed to upload icon',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/routes/:accessCode/icon
+ * Remove custom start location icon from a route
+ */
+router.delete('/:accessCode/icon', async (req, res) => {
+  try {
+    const { accessCode } = req.params;
+
+    // Get route
+    const route = await queryOne(`
+      SELECT * FROM routes
+      WHERE access_code = $1
+    `, [accessCode.toUpperCase()]);
+
+    if (!route) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    if (!route.start_location_icon_url) {
+      return res.status(400).json({
+        error: 'Route has no custom icon'
+      });
+    }
+
+    // Delete from Cloudinary
+    await deleteFromCloudinary(route.start_location_icon_url);
+
+    // Remove from database
+    await query(`
+      UPDATE routes
+      SET start_location_icon_url = NULL
+      WHERE id = $1
+    `, [route.id]);
+
+    console.log(`🗑️  Icon removed from route: ${route.name}`);
+
+    res.json({
+      success: true,
+      message: 'Icon removed successfully'
+    });
+
+  } catch (error) {
+    console.error('Error removing icon:', error);
+    res.status(500).json({
+      error: 'Failed to remove icon',
       message: error.message
     });
   }

@@ -10,6 +10,7 @@
   export let onMarkerClick = null;
   export let showRoute = true;
   export let showMarkers = true; // Control whether to show waypoint markers
+  export let startLocationIconUrl = null; // Custom icon for start location
   export let leaderLocation = null;
   export let autoCenter = false;
 
@@ -105,7 +106,16 @@
         const el = document.createElement('div');
         el.className = 'waypoint-marker';
         el.style.cursor = onMarkerClick ? 'pointer' : 'default';
-        el.innerHTML = `<div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-lg transition-transform hover:scale-110">${index + 1}</div>`;
+
+        // Use custom icon for start location (first waypoint) if provided
+        if (index === 0 && startLocationIconUrl) {
+          el.innerHTML = `<img src="${startLocationIconUrl}" alt="Start location" class="w-10 h-10 object-contain rounded-lg shadow-lg" style="transition: transform 0.2s;">`;
+          el.onmouseenter = () => { el.querySelector('img').style.transform = 'scale(1.1)'; };
+          el.onmouseleave = () => { el.querySelector('img').style.transform = 'scale(1)'; };
+        } else {
+          // Default numbered marker
+          el.innerHTML = `<div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-lg transition-transform hover:scale-110">${index + 1}</div>`;
+        }
 
         // Make marker clickable if callback provided
         if (onMarkerClick) {
