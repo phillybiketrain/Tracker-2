@@ -17,7 +17,7 @@ cd app && npm install && cd ..
 
 **Backend** - Edit `C:\dev2\PBT\.env`:
 ```bash
-DATABASE_URL=postgresql://postgres:Frankie0620!@localhost:5432/bike_train
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/bike_train
 PORT=3001
 NODE_ENV=development
 PUBLIC_APP_URL=http://localhost:5173
@@ -202,7 +202,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete GitHub + Railway deployment guid
 
 **Database connection fails:**
 - Check PostgreSQL is running
-- Verify password in `.env`: `Frankie0620!`
+- Verify password in `.env` matches your PostgreSQL password
 - Run `npm run db:setup` to create database
 
 **Port already in use:**
