@@ -15,6 +15,7 @@
   let routeId = '';
   let success = false;
   let creating = false;
+  let currentMonthOffset = 0; // 0 = current month, 1 = next month, etc.
 
   function handleMapClick(coords) {
     waypoints = [...waypoints, coords];
@@ -123,25 +124,89 @@
     }
   }
 
-  function getNext30Days() {
+  // Get dates for a specific month (0 = current, 1 = next, etc.)
+  function getDatesForMonth(monthOffset) {
     const dates = [];
     const today = new Date();
+    const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
 
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
+    // Get first and last day of target month
+    const firstDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1);
+    const lastDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
+
+    // Start from today if we're in current month, otherwise from 1st
+    let startDate;
+    if (monthOffset === 0) {
+      startDate = today;
+    } else {
+      startDate = firstDay;
+    }
+
+    // Generate dates from start to end of month
+    const currentDate = new Date(startDate);
+    while (currentDate <= lastDay) {
       dates.push({
-        value: date.toISOString().split('T')[0],
-        label: date.toLocaleDateString('en-US', {
+        value: currentDate.toISOString().split('T')[0],
+        day: currentDate.getDate(),
+        weekday: currentDate.getDay(), // 0 = Sunday, 6 = Saturday
+        dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
+        fullLabel: currentDate.toLocaleDateString('en-US', {
           weekday: 'short',
           month: 'short',
           day: 'numeric'
         })
       });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return dates;
   }
+
+  // Group dates by week for calendar layout
+  function getCalendarWeeks(dates) {
+    if (dates.length === 0) return [];
+
+    const weeks = [];
+    let currentWeek = new Array(7).fill(null);
+
+    dates.forEach((date, index) => {
+      const dayOfWeek = date.weekday;
+
+      // First date: fill empty cells before it
+      if (index === 0) {
+        currentWeek = new Array(7).fill(null);
+      }
+
+      currentWeek[dayOfWeek] = date;
+
+      // End of week (Saturday) or last date
+      if (dayOfWeek === 6 || index === dates.length - 1) {
+        weeks.push([...currentWeek]);
+        currentWeek = new Array(7).fill(null);
+      }
+    });
+
+    return weeks;
+  }
+
+  // Get month name for display
+  function getMonthName(monthOffset) {
+    const today = new Date();
+    const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    return targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  function nextMonth() {
+    currentMonthOffset++;
+  }
+
+  function previousMonth() {
+    if (currentMonthOffset > 0) {
+      currentMonthOffset--;
+    }
+  }
+
+  $: availableDates = getDatesForMonth(currentMonthOffset);
 
   function toggleDate(date) {
     if (selectedDates.includes(date)) {
@@ -150,8 +215,6 @@
       selectedDates = [...selectedDates, date];
     }
   }
-
-  const availableDates = getNext30Days();
 </script>
 
 <svelte:head>
@@ -380,16 +443,48 @@
                 Select the dates you want to run this route
               </p>
 
-              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-6">
-                {#each availableDates as date}
-                  <button
-                    on:click={() => toggleDate(date.value)}
-                    class="px-3 py-2 text-sm rounded border transition-all {selectedDates.includes(date.value)
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-white text-warm-gray-700 border-warm-gray-300 hover:border-primary'}"
-                  >
-                    {date.label}
-                  </button>
+              <!-- Month Navigation -->
+              <div class="flex items-center justify-between mb-4">
+                <button
+                  on:click={previousMonth}
+                  disabled={currentMonthOffset === 0}
+                  class="px-3 py-2 text-sm rounded border border-warm-gray-300 hover:bg-warm-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  ← Previous
+                </button>
+                <h3 class="text-lg font-bold text-warm-gray-900">
+                  {getMonthName(currentMonthOffset)}
+                </h3>
+                <button
+                  on:click={nextMonth}
+                  class="px-3 py-2 text-sm rounded border border-warm-gray-300 hover:bg-warm-gray-50 transition-all"
+                >
+                  Next →
+                </button>
+              </div>
+
+              <!-- Calendar Grid -->
+              <div class="mb-6">
+                {#each getCalendarWeeks(availableDates) as week}
+                  <div class="grid grid-cols-7 gap-1 mb-1">
+                    {#each week as date}
+                      {#if date}
+                        <button
+                          on:click={() => toggleDate(date.value)}
+                          class="aspect-square flex flex-col items-center justify-center rounded border transition-all {selectedDates.includes(date.value)
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-white text-warm-gray-700 border-warm-gray-300 hover:border-primary hover:bg-warm-gray-50'}"
+                          title={date.fullLabel}
+                        >
+                          <span class="text-xs {selectedDates.includes(date.value) ? 'text-white/80' : 'text-warm-gray-500'}">{date.dayName}</span>
+                          <span class="text-lg font-bold">{date.day}</span>
+                        </button>
+                      {:else}
+                        <!-- Empty cell for alignment -->
+                        <div class="aspect-square"></div>
+                      {/if}
+                    {/each}
+                  </div>
                 {/each}
               </div>
 
