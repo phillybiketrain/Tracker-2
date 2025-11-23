@@ -24,7 +24,7 @@
     loading = true;
 
     try {
-      const res = await fetch(`${API_URL}/api/rides/${rideId}`);
+      const res = await fetch(`${API_URL}/rides/${rideId}`);
       const data = await res.json();
 
       if (data.success) {
@@ -117,7 +117,7 @@
         localStorage.setItem('session_id', sessionId);
       }
 
-      const res = await fetch(`${API_URL}/api/rides/${rideId}/interest`, {
+      const res = await fetch(`${API_URL}/rides/${rideId}/interest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId })

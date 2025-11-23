@@ -41,7 +41,7 @@
       const fromStr = fromDate.toISOString().split('T')[0];
 
       const res = await fetch(
-        `${API_URL}/api/rides?from_date=${fromStr}&days=${days}&limit=50`
+        `${API_URL}/rides?from_date=${fromStr}&days=${days}&limit=50`
       );
 
       const data = await res.json();
@@ -89,7 +89,7 @@
       }
 
       const res = await fetch(
-        `${API_URL}/api/rides/${rideId}/interest`,
+        `${API_URL}/rides/${rideId}/interest`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

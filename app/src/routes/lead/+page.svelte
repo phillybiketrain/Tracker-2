@@ -80,7 +80,7 @@
   async function createRoute() {
     try {
       // Create route
-      const routeRes = await fetch(`${API_URL}/api/routes`, {
+      const routeRes = await fetch(`${API_URL}/routes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -103,7 +103,7 @@
 
       // Schedule instances
       const scheduleRes = await fetch(
-        `${API_URL}/api/routes/${accessCode}/schedule`,
+        `${API_URL}/routes/${accessCode}/schedule`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

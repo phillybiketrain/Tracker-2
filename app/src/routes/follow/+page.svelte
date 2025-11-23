@@ -31,7 +31,7 @@
     try {
       // Get today's ride for this access code
       const res = await fetch(
-        `${API_URL}/api/rides/by-code/${accessCode}`
+        `${API_URL}/rides/by-code/${accessCode}`
       );
 
       const data = await res.json();
