@@ -51,7 +51,14 @@ router.post('/login', async (req, res) => {
       // No admin found, use env variable for super admin
       const envPasswordHash = process.env.ADMIN_PASSWORD_HASH || '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU7T90O5XsBq'; // admin123
 
+      console.log('Super admin login attempt:');
+      console.log('- Password provided:', password ? '(provided)' : '(empty)');
+      console.log('- Hash from env:', envPasswordHash ? '(set)' : '(not set)');
+      console.log('- Hash value:', envPasswordHash);
+
       const isValid = await bcrypt.compare(password, envPasswordHash);
+
+      console.log('- Password valid:', isValid);
 
       if (!isValid) {
         return res.status(401).json({
