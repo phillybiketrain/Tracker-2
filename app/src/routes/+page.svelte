@@ -215,24 +215,17 @@
 
           <!-- Card Content -->
           <div class="p-6">
-            <!-- Action Button - Top Right -->
-            <div class="absolute top-4 right-4 z-10">
-              {#if nextRide.status === 'live'}
+            {#if nextRide.status === 'live'}
+              <!-- Live Badge - Top Right -->
+              <div class="absolute top-4 right-4 z-10">
                 <span class="btn btn-primary text-xs px-3 py-1 pointer-events-none shadow-md">
                   Track Live
                 </span>
-              {:else}
-                <button
-                  on:click|preventDefault|stopPropagation={() => expressInterest(nextRide.id)}
-                  class="btn btn-secondary text-xs px-3 py-1 shadow-md"
-                >
-                  Interested
-                </button>
-              {/if}
-            </div>
+              </div>
+            {/if}
 
             <!-- Route Name -->
-            <div class="mb-3 pr-24">
+            <div class="mb-3">
               <h3 class="text-lg font-bold text-warm-gray-900">{route.name}</h3>
             </div>
 
@@ -260,11 +253,11 @@
                 <div class="relative ml-4">
                   <button
                     on:click|preventDefault|stopPropagation={() => toggleOverlay(route.id)}
-                    class="text-sm text-warm-gray-600 hover:text-warm-gray-900 flex items-center gap-1"
+                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-warm-gray-100 hover:bg-warm-gray-200 transition-colors"
+                    title="{route.rides.length - 1} more ride{route.rides.length - 1 !== 1 ? 's' : ''}"
                   >
-                    +{route.rides.length - 1} more
-                    <svg class="w-3 h-3 transition-transform {isOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    <svg class="w-4 h-4 text-warm-gray-700 transition-transform {isOpen ? 'rotate-45' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
 
@@ -313,7 +306,7 @@
     border-radius: 0.75rem;
     padding: 0.75rem 1rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    z-index: 10;
+    z-index: 50;
     min-width: 150px;
     animation: tooltipSlide 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
