@@ -27,3 +27,6 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Documentation (project planning and implementation notes)
+docs/
