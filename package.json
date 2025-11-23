@@ -23,7 +23,8 @@
     "nanoid": "^5.0.4",
     "cors": "^2.8.5",
     "nodemailer": "^6.9.7",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "bcrypt": "^5.1.1"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
