@@ -189,6 +189,24 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Get other ride instances for this route
+    const otherRides = await queryAll(`
+      SELECT
+        ri.id,
+        ri.date,
+        ri.status,
+        COUNT(DISTINCT rint.session_id) as interest_count
+      FROM ride_instances ri
+      LEFT JOIN ride_interest rint ON ri.id = rint.ride_instance_id
+      WHERE ri.route_id = $1
+        AND ri.id != $2
+        AND ri.date >= CURRENT_DATE
+        AND ri.status IN ('scheduled', 'live')
+      GROUP BY ri.id
+      ORDER BY ri.date ASC
+      LIMIT 10
+    `, [ride.route_id, id]);
+
     res.json({
       success: true,
       data: {
@@ -196,7 +214,11 @@ router.get('/:id', async (req, res) => {
         current_location: ride.current_location || null,
         location_trail: ride.location_trail || [],
         follower_count: parseInt(ride.follower_count),
-        interest_count: parseInt(ride.interest_count)
+        interest_count: parseInt(ride.interest_count),
+        other_rides: otherRides.map(r => ({
+          ...r,
+          interest_count: parseInt(r.interest_count)
+        }))
       }
     });
 

@@ -11,6 +11,7 @@
   let saving = false;
   let error = '';
   let success = '';
+  let rideInstances = [];
 
   onMount(() => {
     token = localStorage.getItem('admin_token');
@@ -51,7 +52,7 @@
     }
   }
 
-  function startEdit(route) {
+  async function startEdit(route) {
     editing = {
       id: route.id,
       name: route.name,
@@ -62,6 +63,19 @@
     };
     error = '';
     success = '';
+
+    // Load ride instances for this route
+    try {
+      const res = await fetch(`${API_URL}/rides?route_id=${route.id}&days=365`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        rideInstances = data.data;
+      }
+    } catch (err) {
+      console.error('Error loading ride instances:', err);
+    }
   }
 
   function cancelEdit() {
@@ -284,6 +298,51 @@
             </button>
           </div>
         </div>
+
+        <!-- Scheduled Ride Instances -->
+        {#if rideInstances.length > 0}
+          <div class="bg-white rounded-lg border border-warm-gray-200 p-6 mt-6">
+            <h3 class="text-lg font-bold text-warm-gray-900 mb-4">Scheduled Ride Instances ({rideInstances.length})</h3>
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+              {#each rideInstances as ride}
+                <div class="flex items-center justify-between p-3 border border-warm-gray-200 rounded hover:bg-warm-gray-50">
+                  <div>
+                    <div class="font-medium text-warm-gray-900">
+                      {new Date(ride.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </div>
+                    <div class="text-sm text-warm-gray-600 mt-1">
+                      {ride.departure_time}
+                      {#if ride.status === 'live'}
+                        <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Live</span>
+                      {:else}
+                        <span class="ml-2 px-2 py-0.5 bg-warm-gray-100 text-warm-gray-600 text-xs rounded">{ride.status}</span>
+                      {/if}
+                      {#if ride.interest_count > 0}
+                        <span class="ml-2 text-xs text-warm-gray-500">• {ride.interest_count} interested</span>
+                      {/if}
+                    </div>
+                  </div>
+                  <a
+                    href="/ride/{ride.id}"
+                    target="_blank"
+                    class="text-sm text-primary hover:text-primary/80 font-medium"
+                  >
+                    View →
+                  </a>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div class="bg-white rounded-lg border border-warm-gray-200 p-6 mt-6 text-center">
+            <p class="text-warm-gray-500">No scheduled ride instances for this route</p>
+          </div>
+        {/if}
       </div>
     {:else}
       <!-- Routes List -->

@@ -197,6 +197,40 @@
               <p class="text-warm-gray-600">{ride.route_description}</p>
             </div>
           {/if}
+
+          {#if ride.other_rides && ride.other_rides.length > 0}
+            <div class="card">
+              <h3 class="font-bold mb-3 text-warm-gray-900">Other Scheduled Rides</h3>
+              <div class="space-y-2">
+                {#each ride.other_rides as otherRide}
+                  <a
+                    href="/ride/{otherRide.id}"
+                    class="block p-3 rounded-lg border border-warm-gray-200 hover:bg-warm-gray-50 transition-colors"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <div class="font-medium text-warm-gray-900">
+                          {new Date(otherRide.date).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        {#if otherRide.status === 'live'}
+                          <div class="text-xs text-green-600 font-semibold mt-1">Live Now</div>
+                        {:else if otherRide.interest_count > 0}
+                          <div class="text-xs text-warm-gray-500 mt-1">{otherRide.interest_count} interested</div>
+                        {/if}
+                      </div>
+                      <svg class="w-5 h-5 text-warm-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </a>
+                {/each}
+              </div>
+            </div>
+          {/if}
         </div>
 
         <div class="space-y-4">
