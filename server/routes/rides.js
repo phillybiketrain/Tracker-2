@@ -19,7 +19,8 @@ router.get('/', async (req, res) => {
       from_date = new Date().toISOString().split('T')[0],
       days = 7,
       limit = 50,
-      region = 'philly'
+      region = 'philly',
+      route_id // Optional filter by specific route
     } = req.query;
 
     // Get region_id
@@ -32,6 +33,25 @@ router.get('/', async (req, res) => {
         error: 'Invalid region',
         message: `Region '${region}' does not exist`
       });
+    }
+
+    // Build WHERE clause based on filters
+    let whereClause = `
+      WHERE ri.date >= $1
+        AND ri.date <= $1::date + $2::integer
+        AND ri.status IN ('scheduled', 'live')
+        AND ri.region_id = $4
+    `;
+
+    const params = [from_date, days, limit, regionData.id];
+
+    // Add route_id filter if provided
+    if (route_id) {
+      whereClause += ` AND ri.route_id = $5`;
+      params.push(route_id);
+    } else {
+      // Only filter by approved status if not filtering by specific route
+      whereClause += ` AND r.status = 'approved'`;
     }
 
     const rides = await queryAll(`
@@ -50,15 +70,11 @@ router.get('/', async (req, res) => {
       JOIN routes r ON ri.route_id = r.id
       LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
       LEFT JOIN ride_interest rint ON ri.id = rint.ride_instance_id
-      WHERE ri.date >= $1
-        AND ri.date <= $1::date + $2::integer
-        AND ri.status IN ('scheduled', 'live')
-        AND r.status = 'approved'
-        AND ri.region_id = $4
+      ${whereClause}
       GROUP BY ri.id, r.id
       ORDER BY ri.date ASC, r.departure_time ASC
       LIMIT $3
-    `, [from_date, days, limit, regionData.id]);
+    `, params);
 
     res.json({
       success: true,

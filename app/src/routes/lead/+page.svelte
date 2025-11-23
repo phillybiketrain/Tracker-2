@@ -231,14 +231,9 @@
 
   {#if step === 'creating'}
     <!-- Route Creation Accordion -->
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold mb-2 text-warm-gray-900">Create a Route</h1>
-      <p class="text-warm-gray-600">Follow the steps below to create your bike train route</p>
-    </div>
-
     <div class="max-w-4xl mx-auto space-y-4">
 
-      <!-- Step 1: Route Details -->
+      <!-- Step 1: Create a Route -->
       <div class="card overflow-hidden">
         <button
           on:click={() => toggleStep(1)}
@@ -249,7 +244,7 @@
               1
             </div>
             <div>
-              <h2 class="text-xl font-bold text-warm-gray-900">Route Details</h2>
+              <h2 class="text-xl font-bold text-warm-gray-900">Create a Route</h2>
               <p class="text-sm text-warm-gray-600">Name, time, and description</p>
             </div>
           </div>
@@ -492,7 +487,7 @@
         </div>
 
         <p class="text-warm-gray-600 mb-8">
-          Save this code. You'll need it to start broadcasting on your scheduled dates.
+          Save this code. You'll need it to manage your route and start broadcasting.
         </p>
 
         <div class="space-y-3">
@@ -500,8 +495,8 @@
             Start Broadcasting Now
           </button>
 
-          <a href="/browse" class="btn btn-secondary w-full block">
-            Browse All Rides
+          <a href="/manage?code={accessCode}" class="btn btn-secondary w-full block">
+            Manage This Route
           </a>
 
           <a href="/" class="btn btn-secondary w-full block">
