@@ -2,8 +2,10 @@
 // Check if we're in production by looking at the hostname
 const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('railway.app');
 
+// In production, construct the API URL from the PUBLIC_APP_URL env variable
+// This should be set to the server's Railway URL
 export const API_URL = isProduction
-  ? 'https://tracker-2-production.up.railway.app'
+  ? (import.meta.env.PUBLIC_API_URL || 'https://tracker-2-production.up.railway.app')
   : (import.meta.env.PUBLIC_API_URL || 'http://localhost:3001');
 
 export const MAPBOX_TOKEN = isProduction
