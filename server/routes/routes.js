@@ -215,6 +215,84 @@ router.post('/:accessCode/schedule', async (req, res) => {
 });
 
 /**
+ * GET /api/routes/:accessCode/next-ride
+ * Get the next scheduled ride for a specific route
+ * Perfect for embedding on external websites
+ */
+router.get('/:accessCode/next-ride', async (req, res) => {
+  try {
+    const { accessCode } = req.params;
+
+    // Get route
+    const route = await queryOne(`
+      SELECT * FROM routes
+      WHERE access_code = $1
+    `, [accessCode.toUpperCase()]);
+
+    if (!route) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    // Get next upcoming ride instance
+    const nextRide = await queryOne(`
+      SELECT
+        ri.*,
+        COUNT(DISTINCT rf.session_id) as follower_count,
+        COUNT(DISTINCT rint.session_id) as interest_count
+      FROM ride_instances ri
+      LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
+      LEFT JOIN ride_interest rint ON ri.id = rint.ride_instance_id
+      WHERE ri.route_id = $1
+        AND ri.date >= CURRENT_DATE
+        AND ri.status IN ('scheduled', 'live')
+      GROUP BY ri.id
+      ORDER BY ri.date ASC, ri.created_at ASC
+      LIMIT 1
+    `, [route.id]);
+
+    if (!nextRide) {
+      return res.status(404).json({
+        error: 'No upcoming rides scheduled for this route'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        route: {
+          access_code: route.access_code,
+          name: route.name,
+          description: route.description,
+          waypoints: route.waypoints,
+          departure_time: route.departure_time,
+          estimated_duration: route.estimated_duration,
+          tag: route.tag,
+          preview_image_url: route.preview_image_url
+        },
+        next_ride: {
+          id: nextRide.id,
+          date: nextRide.date,
+          status: nextRide.status,
+          follower_count: parseInt(nextRide.follower_count),
+          interest_count: parseInt(nextRide.interest_count),
+          is_live: nextRide.status === 'live',
+          current_location: nextRide.current_location || null
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching next ride:', error);
+    res.status(500).json({
+      error: 'Failed to fetch next ride',
+      message: error.message
+    });
+  }
+});
+
+/**
  * GET /api/routes
  * List all approved routes (optionally filtered by region)
  */
