@@ -6,6 +6,7 @@
 import express from 'express';
 import { query, queryOne, queryAll } from '../db/client.js';
 import { z } from 'zod';
+import { generateRoutePreviewUrl } from '../utils/mapbox.js';
 
 const router = express.Router();
 
@@ -56,14 +57,17 @@ router.post('/', async (req, res) => {
       'SELECT generate_access_code() as code'
     );
 
+    // Generate static preview image URL
+    const previewImageUrl = generateRoutePreviewUrl(data.waypoints);
+
     // Create route (pending approval by default)
     const route = await queryOne(`
       INSERT INTO routes (
         access_code, name, description, waypoints,
         departure_time, estimated_duration, creator_email,
-        status, tag, region_id
+        status, tag, region_id, preview_image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `, [
       accessCode.code,
@@ -75,7 +79,8 @@ router.post('/', async (req, res) => {
       data.creator_email || null,
       'pending', // Requires admin approval
       data.tag || 'community',
-      region.id
+      region.id,
+      previewImageUrl
     ]);
 
     console.log(`✅ Route created: ${route.name} (${route.access_code})`);

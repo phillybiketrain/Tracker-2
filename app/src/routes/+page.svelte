@@ -209,7 +209,7 @@
           <!-- Route Map Preview -->
           {#if route.waypoints && route.waypoints.length > 0}
             <div class="h-32 w-full overflow-hidden">
-              <RoutePreview waypoints={route.waypoints} />
+              <RoutePreview waypoints={route.waypoints} previewImageUrl={route.preview_image_url} />
             </div>
           {/if}
 

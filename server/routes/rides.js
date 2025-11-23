@@ -39,6 +39,7 @@ router.get('/live', async (req, res) => {
         r.departure_time,
         r.estimated_duration,
         r.tag,
+        r.preview_image_url,
         COUNT(DISTINCT rf.session_id) as follower_count
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
@@ -123,6 +124,7 @@ router.get('/', async (req, res) => {
         r.departure_time,
         r.estimated_duration,
         r.tag,
+        r.preview_image_url,
         COUNT(DISTINCT rf.session_id) as follower_count,
         COUNT(DISTINCT rint.session_id) as interest_count
       FROM ride_instances ri

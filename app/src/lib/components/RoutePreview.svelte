@@ -4,17 +4,23 @@
   import { MAPBOX_TOKEN } from '$lib/config.js';
 
   export let waypoints = [];
+  export let previewImageUrl = null;
 
   let mapContainer;
   let map;
   let loaded = false;
+  let imageLoaded = false;
 
-  // TODO: For better performance, consider using Mapbox Static Images API
-  // to pre-generate route preview images at route creation time.
-  // This would eliminate the need for map initialization on page load.
-  // API: https://docs.mapbox.com/api/maps/static-images/
+  // If static image URL is provided, use that instead of initializing a map
+  // This significantly improves performance
 
   onMount(() => {
+    // If we have a static image, we don't need to initialize the map
+    if (previewImageUrl) {
+      return;
+    }
+
+    // Fall back to dynamic map initialization
     if (!waypoints || waypoints.length === 0) return;
 
     if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'pk.YOUR_MAPBOX_TOKEN_HERE') {
@@ -86,7 +92,19 @@
   });
 </script>
 
-<div bind:this={mapContainer} class="w-full h-full bg-warm-gray-100 map-container" class:loaded />
+{#if previewImageUrl}
+  <!-- Use static image for better performance -->
+  <img
+    src={previewImageUrl}
+    alt="Route preview"
+    class="w-full h-full object-cover map-container"
+    class:loaded={imageLoaded}
+    on:load={() => imageLoaded = true}
+  />
+{:else}
+  <!-- Fall back to dynamic map -->
+  <div bind:this={mapContainer} class="w-full h-full bg-warm-gray-100 map-container" class:loaded />
+{/if}
 
 <style>
   .map-container {
