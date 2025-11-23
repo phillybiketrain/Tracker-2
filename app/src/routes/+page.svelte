@@ -33,7 +33,7 @@
 
     try {
       let fromDate = new Date();
-      let days = 1;
+      let days = 1; // Default for 'today'
 
       if (filter === 'tomorrow') {
         fromDate.setDate(fromDate.getDate() + 1);
@@ -46,6 +46,8 @@
 
       const fromStr = fromDate.toISOString().split('T')[0];
 
+      console.log(`Loading rides: filter=${filter}, fromDate=${fromStr}, days=${days}`);
+
       const res = await fetch(
         `${API_URL}/rides?from_date=${fromStr}&days=${days}&limit=500`
       );
@@ -54,6 +56,7 @@
 
       if (data.success) {
         rides = data.data;
+        console.log(`Received ${rides.length} rides`);
 
         // Group rides by route
         const routeMap = new Map();
@@ -77,11 +80,13 @@
 
         const allRoutes = Array.from(routeMap.values());
         totalRoutes = allRoutes.length;
+        console.log(`Grouped into ${totalRoutes} unique routes`);
 
         // Paginate routes
         const startIdx = (currentPage - 1) * pageSize;
         const endIdx = startIdx + pageSize;
         routes = allRoutes.slice(startIdx, endIdx);
+        console.log(`Showing routes ${startIdx + 1}-${startIdx + routes.length} of ${totalRoutes}`);
       }
 
     } catch (error) {
