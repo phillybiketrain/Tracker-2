@@ -1,5 +1,4 @@
 <script>
-  import { onMount } from 'svelte';
   import { API_URL } from '$lib/config.js';
   import RoutePreview from '$lib/components/RoutePreview.svelte';
 
@@ -23,10 +22,6 @@
   function closeOverlay() {
     openOverlay = null;
   }
-
-  onMount(() => {
-    loadRides();
-  });
 
   async function loadRides() {
     loading = true;
@@ -154,7 +149,7 @@
     return `${hour12}:${minutes} ${ampm}`;
   }
 
-  $: {
+  $: if (filter) {
     // Reset to page 1 and reload rides when filter changes
     currentPage = 1;
     loadRides();
