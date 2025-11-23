@@ -11,6 +11,8 @@
   let saving = false;
   let error = '';
   let success = '';
+  let showPreview = false;
+  let previewHtml = '';
 
   onMount(() => {
     token = localStorage.getItem('admin_token');
@@ -61,12 +63,52 @@
     };
     error = '';
     success = '';
+    updatePreview();
   }
 
   function cancelEdit() {
     editing = null;
     error = '';
     success = '';
+    showPreview = false;
+  }
+
+  function updatePreview() {
+    if (!editing) return;
+
+    // Replace template variables with sample data
+    let html = editing.html_body;
+
+    // Sample data for preview
+    const sampleData = {
+      region_name: 'Philly Bike Train',
+      unsubscribe_url: '#',
+      message: 'This is a sample message for preview purposes.',
+      routes: `
+        <div style="margin: 20px 0;">
+          <div style="margin-bottom: 20px; padding: 15px; border-left: 3px solid #E85D04; background: #f9f9f9;">
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Morning Commute Train</div>
+            <div style="color: #666; margin-bottom: 5px;">Join us for a safe ride downtown</div>
+            <div style="font-size: 14px; color: #333;">📅 Monday, January 15 at 8:00 AM</div>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">Tag: regular</div>
+          </div>
+          <div style="margin-bottom: 20px; padding: 15px; border-left: 3px solid #E85D04; background: #f9f9f9;">
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Weekend Explorer Ride</div>
+            <div style="color: #666; margin-bottom: 5px;">Casual neighborhood tour</div>
+            <div style="font-size: 14px; color: #333;">📅 Saturday, January 20 at 10:00 AM</div>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">Tag: community</div>
+          </div>
+        </div>
+      `
+    };
+
+    // Replace all variables
+    Object.keys(sampleData).forEach(key => {
+      const placeholder = new RegExp(`{{${key}}}`, 'g');
+      html = html.replace(placeholder, sampleData[key]);
+    });
+
+    previewHtml = html;
   }
 
   async function saveTemplate() {
@@ -152,86 +194,122 @@
         <p class="text-warm-gray-600">Loading templates...</p>
       </div>
     {:else if editing}
-      <!-- Edit Form -->
-      <div class="max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg border border-warm-gray-200 p-6">
-          <div class="mb-6">
-            <h2 class="text-lg font-bold text-warm-gray-900 mb-1">
-              Edit {editing.type.replace('_', ' ')}
-            </h2>
-            <p class="text-sm text-warm-gray-600">
-              {getTemplateDescription(editing.type)}
-            </p>
-          </div>
-
-          <div class="space-y-4 mb-6">
-            <div>
-              <label class="block text-sm font-medium text-warm-gray-900 mb-2">
-                Subject Line
-              </label>
-              <input
-                type="text"
-                bind:value={editing.subject}
-                disabled={saving}
-                class="w-full px-4 py-2 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-warm-gray-900 mb-2">
-                HTML Body
-              </label>
-              <textarea
-                bind:value={editing.html_body}
-                disabled={saving}
-                rows="10"
-                class="w-full px-4 py-2 border border-warm-gray-300 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
-              ></textarea>
-              <p class="text-xs text-warm-gray-500 mt-1">
-                Available variables: <code>{`{{routes}}`}</code>, <code>{`{{unsubscribe_url}}`}</code>, <code>{`{{message}}`}</code>
+      <!-- Edit Form with Preview -->
+      <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Editor -->
+          <div class="bg-white rounded-lg border border-warm-gray-200 p-6">
+            <div class="mb-6">
+              <h2 class="text-lg font-bold text-warm-gray-900 mb-1">
+                Edit {editing.type.replace('_', ' ')}
+              </h2>
+              <p class="text-sm text-warm-gray-600">
+                {getTemplateDescription(editing.type)}
               </p>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-warm-gray-900 mb-2">
-                Plain Text Body
-              </label>
-              <textarea
-                bind:value={editing.text_body}
+            <div class="space-y-4 mb-6">
+              <div>
+                <label class="block text-sm font-medium text-warm-gray-900 mb-2">
+                  Subject Line
+                </label>
+                <input
+                  type="text"
+                  bind:value={editing.subject}
+                  on:input={updatePreview}
+                  disabled={saving}
+                  class="w-full px-4 py-2 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-warm-gray-900 mb-2">
+                  HTML Body
+                </label>
+                <textarea
+                  bind:value={editing.html_body}
+                  on:input={updatePreview}
+                  disabled={saving}
+                  rows="15"
+                  class="w-full px-4 py-2 border border-warm-gray-300 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                ></textarea>
+                <p class="text-xs text-warm-gray-500 mt-1">
+                  Available variables: <code>{`{{routes}}`}</code>, <code>{`{{unsubscribe_url}}`}</code>, <code>{`{{message}}`}</code>, <code>{`{{region_name}}`}</code>
+                </p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-warm-gray-900 mb-2">
+                  Plain Text Body
+                </label>
+                <textarea
+                  bind:value={editing.text_body}
+                  disabled={saving}
+                  rows="8"
+                  class="w-full px-4 py-2 border border-warm-gray-300 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                ></textarea>
+              </div>
+            </div>
+
+            {#if error}
+              <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {error}
+              </div>
+            {/if}
+
+            {#if success}
+              <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                {success}
+              </div>
+            {/if}
+
+            <div class="flex justify-end gap-3">
+              <button
+                on:click={cancelEdit}
                 disabled={saving}
-                rows="10"
-                class="w-full px-4 py-2 border border-warm-gray-300 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
-              ></textarea>
+                class="px-6 py-2 border border-warm-gray-300 rounded text-warm-gray-700 hover:bg-warm-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                on:click={saveTemplate}
+                disabled={saving}
+                class="px-6 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Template'}
+              </button>
             </div>
           </div>
 
-          {#if error}
-            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-              {error}
+          <!-- Preview Panel -->
+          <div class="bg-white rounded-lg border border-warm-gray-200 p-6">
+            <div class="mb-4">
+              <h3 class="text-lg font-bold text-warm-gray-900">Email Preview</h3>
+              <p class="text-xs text-warm-gray-500 mt-1">Live preview with sample data</p>
             </div>
-          {/if}
 
-          {#if success}
-            <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-700">
-              {success}
+            <div class="border border-warm-gray-200 rounded-lg overflow-hidden">
+              <!-- Email Header -->
+              <div class="bg-warm-gray-100 px-4 py-2 border-b border-warm-gray-200">
+                <div class="text-xs text-warm-gray-600 mb-1">Subject:</div>
+                <div class="text-sm font-medium text-warm-gray-900">{editing.subject}</div>
+              </div>
+
+              <!-- Email Body Preview -->
+              <div class="p-4 bg-white overflow-auto" style="max-height: 600px;">
+                {@html previewHtml}
+              </div>
             </div>
-          {/if}
 
-          <div class="flex justify-end gap-3">
-            <button
-              on:click={cancelEdit}
-              disabled={saving}
-              class="px-6 py-2 border border-warm-gray-300 rounded text-warm-gray-700 hover:bg-warm-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              on:click={saveTemplate}
-              disabled={saving}
-              class="px-6 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Template'}
-            </button>
+            <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+              <strong>Preview Variables:</strong>
+              <ul class="mt-1 space-y-0.5">
+                <li>• region_name: Philly Bike Train</li>
+                <li>• routes: 2 sample rides</li>
+                <li>• message: Sample message</li>
+                <li>• unsubscribe_url: #</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

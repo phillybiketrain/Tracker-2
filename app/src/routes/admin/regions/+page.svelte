@@ -241,12 +241,20 @@
                   </div>
                 </div>
 
-                <a
-                  href="/admin/dashboard?region={region.slug}"
-                  class="px-4 py-2 bg-warm-gray-100 text-warm-gray-700 text-sm font-medium rounded hover:bg-warm-gray-200"
-                >
-                  Manage
-                </a>
+                <div class="flex gap-2">
+                  <a
+                    href="/admin/users?region={region.slug}"
+                    class="px-4 py-2 bg-blue-100 text-blue-700 text-sm font-medium rounded hover:bg-blue-200"
+                  >
+                    Users
+                  </a>
+                  <a
+                    href="/admin/dashboard?region={region.slug}"
+                    class="px-4 py-2 bg-warm-gray-100 text-warm-gray-700 text-sm font-medium rounded hover:bg-warm-gray-200"
+                  >
+                    Manage
+                  </a>
+                </div>
               </div>
             </div>
           {/each}

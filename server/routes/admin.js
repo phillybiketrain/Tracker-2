@@ -633,6 +633,328 @@ router.post('/email/send-digest', requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/users
+ * Get all admin users for a region (super admin only)
+ */
+router.get('/users', requireAdmin, async (req, res) => {
+  try {
+    if (req.admin.role !== 'super') {
+      return res.status(403).json({
+        error: 'Super admin access required'
+      });
+    }
+
+    const { region } = req.query;
+
+    let users;
+    if (region) {
+      const regionData = await queryOne(`
+        SELECT id FROM regions WHERE slug = $1
+      `, [region]);
+
+      if (!regionData) {
+        return res.status(400).json({
+          error: 'Invalid region'
+        });
+      }
+
+      users = await queryAll(`
+        SELECT id, email, role, region_id, created_at
+        FROM admin_users
+        WHERE region_id = $1
+        ORDER BY created_at DESC
+      `, [regionData.id]);
+    } else {
+      users = await queryAll(`
+        SELECT id, email, role, region_id, created_at
+        FROM admin_users
+        ORDER BY created_at DESC
+      `);
+    }
+
+    res.json({
+      success: true,
+      data: users
+    });
+
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    res.status(500).json({
+      error: 'Failed to fetch admin users',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/admin/users
+ * Create new admin user for a region (super admin only)
+ */
+router.post('/users', requireAdmin, async (req, res) => {
+  try {
+    if (req.admin.role !== 'super') {
+      return res.status(403).json({
+        error: 'Super admin access required'
+      });
+    }
+
+    const { email, password, region, role = 'admin' } = req.body;
+
+    if (!email || !password || !region) {
+      return res.status(400).json({
+        error: 'email, password, and region are required'
+      });
+    }
+
+    // Get region_id
+    const regionData = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [region]);
+
+    if (!regionData) {
+      return res.status(400).json({
+        error: 'Invalid region'
+      });
+    }
+
+    // Check if user already exists
+    const existing = await queryOne(`
+      SELECT id FROM admin_users WHERE email = $1
+    `, [email]);
+
+    if (existing) {
+      return res.status(400).json({
+        error: 'Admin user with this email already exists'
+      });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    // Create admin user
+    const user = await queryOne(`
+      INSERT INTO admin_users (email, password_hash, role, region_id)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, email, role, region_id, created_at
+    `, [email, passwordHash, role, regionData.id]);
+
+    console.log(`✅ Admin user created: ${email} for region ${region}`);
+
+    res.status(201).json({
+      success: true,
+      data: user
+    });
+
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    res.status(500).json({
+      error: 'Failed to create admin user',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/admin/users/:id
+ * Remove admin user (super admin only)
+ */
+router.delete('/users/:id', requireAdmin, async (req, res) => {
+  try {
+    if (req.admin.role !== 'super') {
+      return res.status(403).json({
+        error: 'Super admin access required'
+      });
+    }
+
+    const { id } = req.params;
+
+    const user = await queryOne(`
+      DELETE FROM admin_users
+      WHERE id = $1
+      RETURNING email
+    `, [id]);
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Admin user not found'
+      });
+    }
+
+    console.log(`🗑️  Admin user removed: ${user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Admin user removed'
+    });
+
+  } catch (error) {
+    console.error('Error removing admin user:', error);
+    res.status(500).json({
+      error: 'Failed to remove admin user',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/routes/all
+ * Get all routes for management (including pending)
+ */
+router.get('/routes/all', requireAdmin, async (req, res) => {
+  try {
+    const { region = 'philly' } = req.query;
+
+    // Get region_id
+    const regionData = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [region]);
+
+    if (!regionData) {
+      return res.status(400).json({
+        error: 'Invalid region'
+      });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== regionData.id) {
+      return res.status(403).json({
+        error: 'Access denied to this region'
+      });
+    }
+
+    const routes = await queryAll(`
+      SELECT r.*,
+        COUNT(DISTINCT ri.id) as scheduled_rides_count,
+        MAX(ri.scheduled_date) as last_ride_date
+      FROM routes r
+      LEFT JOIN ride_instances ri ON r.id = ri.route_id
+      WHERE r.region_id = $1
+      GROUP BY r.id
+      ORDER BY
+        CASE r.status
+          WHEN 'pending' THEN 1
+          WHEN 'approved' THEN 2
+          ELSE 3
+        END,
+        r.created_at DESC
+    `, [regionData.id]);
+
+    res.json({
+      success: true,
+      data: routes
+    });
+
+  } catch (error) {
+    console.error('Error fetching routes:', error);
+    res.status(500).json({
+      error: 'Failed to fetch routes',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * PUT /api/admin/routes/:id
+ * Update route details
+ */
+router.put('/routes/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, departure_time, estimated_duration, tag } = req.body;
+
+    // Get route to check access
+    const existingRoute = await queryOne(`
+      SELECT region_id FROM routes WHERE id = $1
+    `, [id]);
+
+    if (!existingRoute) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== existingRoute.region_id) {
+      return res.status(403).json({
+        error: 'Access denied to this region'
+      });
+    }
+
+    const route = await queryOne(`
+      UPDATE routes
+      SET name = COALESCE($1, name),
+          description = COALESCE($2, description),
+          departure_time = COALESCE($3, departure_time),
+          estimated_duration = COALESCE($4, estimated_duration),
+          tag = COALESCE($5, tag)
+      WHERE id = $6
+      RETURNING *
+    `, [name, description, departure_time, estimated_duration, tag, id]);
+
+    console.log(`✏️  Route updated: ${route.name}`);
+
+    res.json({
+      success: true,
+      data: route
+    });
+
+  } catch (error) {
+    console.error('Error updating route:', error);
+    res.status(500).json({
+      error: 'Failed to update route',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/admin/routes/:id
+ * Delete a route (removes all scheduled rides too)
+ */
+router.delete('/routes/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get route to check access
+    const existingRoute = await queryOne(`
+      SELECT region_id, name FROM routes WHERE id = $1
+    `, [id]);
+
+    if (!existingRoute) {
+      return res.status(404).json({
+        error: 'Route not found'
+      });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== existingRoute.region_id) {
+      return res.status(403).json({
+        error: 'Access denied to this region'
+      });
+    }
+
+    // Delete route (cascade will handle ride_instances)
+    await query(`
+      DELETE FROM routes WHERE id = $1
+    `, [id]);
+
+    console.log(`🗑️  Route deleted: ${existingRoute.name}`);
+
+    res.json({
+      success: true,
+      message: 'Route and all scheduled rides deleted'
+    });
+
+  } catch (error) {
+    console.error('Error deleting route:', error);
+    res.status(500).json({
+      error: 'Failed to delete route',
+      message: error.message
+    });
+  }
+});
+
 // Helper function to generate session token
 function generateToken() {
   return Array.from({ length: 32 }, () =>
