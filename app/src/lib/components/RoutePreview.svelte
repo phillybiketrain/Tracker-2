@@ -1,87 +1,89 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import mapboxgl from 'mapbox-gl';
+  import { MAPBOX_TOKEN } from '$lib/config.js';
 
   export let waypoints = [];
 
-  let mapElement;
+  let mapContainer;
   let map;
-  let bounds;
 
   onMount(() => {
-    if (!window.google || !waypoints || waypoints.length === 0) return;
+    if (!waypoints || waypoints.length === 0) return;
 
-    // Initialize map with desaturated style
-    map = new google.maps.Map(mapElement, {
-      center: { lat: waypoints[0].lat, lng: waypoints[0].lng },
-      zoom: 13,
-      disableDefaultUI: true, // Remove all controls
-      draggable: false,
-      zoomControl: false,
-      scrollwheel: false,
-      disableDoubleClickZoom: true,
-      gestureHandling: 'none',
-      styles: [
-        {
-          // Desaturate everything
-          stylers: [
-            { saturation: -80 },
-            { lightness: 20 }
-          ]
-        },
-        {
-          // Make water lighter
-          featureType: 'water',
-          stylers: [
-            { lightness: 40 }
-          ]
-        },
-        {
-          // Simplify roads
-          featureType: 'road',
-          elementType: 'labels',
-          stylers: [
-            { visibility: 'off' }
-          ]
-        },
-        {
-          // Hide POIs
-          featureType: 'poi',
-          stylers: [
-            { visibility: 'off' }
-          ]
-        }
-      ]
+    if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'pk.YOUR_MAPBOX_TOKEN_HERE') {
+      console.error('⚠️ Missing Mapbox token');
+      return;
+    }
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+
+    // Initialize map with muted/desaturated style
+    map = new mapboxgl.Map({
+      container: mapContainer,
+      style: 'mapbox://styles/mapbox/light-v11', // Light, minimal style
+      center: [waypoints[0].lng, waypoints[0].lat],
+      zoom: 12,
+      interactive: false, // Disable all interaction
+      attributionControl: false // Hide attribution
     });
 
-    // Draw route path
-    if (waypoints.length > 0) {
-      bounds = new google.maps.LatLngBounds();
+    map.on('load', () => {
+      // Add route line
+      if (waypoints.length >= 2) {
+        const routeData = {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: waypoints.map(wp => [wp.lng, wp.lat])
+          }
+        };
 
-      const path = waypoints.map(wp => {
-        const pos = { lat: wp.lat, lng: wp.lng };
-        bounds.extend(pos);
-        return pos;
-      });
+        map.addSource('route', {
+          type: 'geojson',
+          data: routeData
+        });
 
-      // Draw the route line
-      new google.maps.Polyline({
-        path: path,
-        geodesic: true,
-        strokeColor: '#E85D04', // Primary orange color
-        strokeOpacity: 1.0,
-        strokeWeight: 4,
-        map: map
-      });
+        map.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          paint: {
+            'line-color': '#E85D04', // Primary orange
+            'line-width': 4,
+            'line-opacity': 1.0
+          }
+        });
 
-      // Fit bounds with some padding
-      map.fitBounds(bounds, {
-        top: 20,
-        right: 20,
-        bottom: 20,
-        left: 20
-      });
-    }
+        // Fit map to show entire route
+        const bounds = waypoints.reduce((bounds, wp) => {
+          return bounds.extend([wp.lng, wp.lat]);
+        }, new mapboxgl.LngLatBounds([waypoints[0].lng, waypoints[0].lat], [waypoints[0].lng, waypoints[0].lat]));
+
+        map.fitBounds(bounds, {
+          padding: 20,
+          duration: 0
+        });
+      }
+
+      // Apply desaturation filter
+      map.setPaintProperty('water', 'fill-color', '#d4d4d8');
+      map.setPaintProperty('landuse', 'fill-opacity', 0.3);
+    });
+  });
+
+  onDestroy(() => {
+    if (map) map.remove();
   });
 </script>
 
-<div bind:this={mapElement} class="w-full h-full bg-warm-gray-100"></div>
+<div bind:this={mapContainer} class="w-full h-full bg-warm-gray-100" />
+
+<style>
+  :global(.mapboxgl-ctrl-logo) {
+    display: none !important;
+  }
+  :global(.mapboxgl-ctrl-attrib) {
+    display: none !important;
+  }
+</style>
