@@ -9,6 +9,7 @@
   let stats = null;
   let pendingRoutes = [];
   let loading = true;
+  let confirmingAction = null; // { routeId, action: 'approve' | 'reject' }
 
   onMount(() => {
     // Check if logged in
@@ -61,9 +62,15 @@
     }
   }
 
-  async function approveRoute(routeId) {
-    if (!confirm('Approve this route?')) return;
+  function startConfirm(routeId, action) {
+    confirmingAction = { routeId, action };
+  }
 
+  function cancelConfirm() {
+    confirmingAction = null;
+  }
+
+  async function confirmApprove(routeId) {
     try {
       const res = await fetch(`${API_URL}/admin/routes/${routeId}/approve`, {
         method: 'POST',
@@ -72,18 +79,17 @@
 
       if (!res.ok) throw new Error('Failed to approve');
 
-      // Reload data
+      confirmingAction = null;
       await loadData();
 
     } catch (err) {
       alert('Failed to approve route');
       console.error(err);
+      confirmingAction = null;
     }
   }
 
-  async function rejectRoute(routeId) {
-    if (!confirm('Reject and delete this route? This cannot be undone.')) return;
-
+  async function confirmReject(routeId) {
     try {
       const res = await fetch(`${API_URL}/admin/routes/${routeId}/reject`, {
         method: 'POST',
@@ -92,12 +98,13 @@
 
       if (!res.ok) throw new Error('Failed to reject');
 
-      // Reload data
+      confirmingAction = null;
       await loadData();
 
     } catch (err) {
       alert('Failed to reject route');
       console.error(err);
+      confirmingAction = null;
     }
   }
 
@@ -230,18 +237,46 @@
                   </div>
 
                   <div class="flex items-center gap-2 ml-4">
-                    <button
-                      on:click={() => approveRoute(route.id)}
-                      class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      on:click={() => rejectRoute(route.id)}
-                      class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700"
-                    >
-                      Reject
-                    </button>
+                    {#if confirmingAction?.routeId === route.id}
+                      <!-- Confirmation State -->
+                      <div class="flex items-center gap-2 confirmation-slide">
+                        {#if confirmingAction.action === 'approve'}
+                          <button
+                            on:click={() => confirmApprove(route.id)}
+                            class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700"
+                          >
+                            Confirm Approve
+                          </button>
+                        {:else}
+                          <button
+                            on:click={() => confirmReject(route.id)}
+                            class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700"
+                          >
+                            Confirm Reject
+                          </button>
+                        {/if}
+                        <button
+                          on:click={cancelConfirm}
+                          class="px-4 py-2 bg-warm-gray-200 text-warm-gray-700 text-sm font-medium rounded hover:bg-warm-gray-300"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    {:else}
+                      <!-- Initial State -->
+                      <button
+                        on:click={() => startConfirm(route.id, 'approve')}
+                        class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        on:click={() => startConfirm(route.id, 'reject')}
+                        class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700"
+                      >
+                        Reject
+                      </button>
+                    {/if}
                   </div>
                 </div>
               </div>
@@ -252,3 +287,20 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .confirmation-slide {
+    animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes slideIn {
+    0% {
+      opacity: 0;
+      transform: translateX(10px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+</style>
