@@ -252,7 +252,11 @@
     // Add all days in month
     for (let day = 1; day <= lastDay.getDate(); day++) {
       const date = new Date(year, month, day);
-      const dateStr = date.toISOString().split('T')[0];
+      // Format date as YYYY-MM-DD in local timezone (not UTC)
+      const dateYear = date.getFullYear();
+      const dateMonth = String(date.getMonth() + 1).padStart(2, '0');
+      const dateDay = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${dateYear}-${dateMonth}-${dateDay}`;
       const isPast = date < today;
 
       days.push({ date, dateStr, isPast });
