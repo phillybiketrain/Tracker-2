@@ -193,7 +193,7 @@
       <div class="grid md:grid-cols-3 gap-6 mb-6">
         <div class="md:col-span-2">
           <div class="h-96 mb-4 rounded-2xl overflow-hidden">
-            <Map waypoints={ride.waypoints || []} showMarkers={true} startLocationIconUrl={ride.start_location_icon_url} />
+            <Map waypoints={ride.waypoints || []} showStartIconOnly={true} startLocationIconUrl={ride.start_location_icon_url} />
           </div>
 
           {#if ride.route_description}
@@ -322,6 +322,7 @@
           bind:this={mapComponent}
           waypoints={ride.waypoints || []}
           {leaderLocation}
+          showStartIconOnly={true}
           startLocationIconUrl={ride.start_location_icon_url}
         />
       </div>
