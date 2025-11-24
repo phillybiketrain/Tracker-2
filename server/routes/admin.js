@@ -1116,8 +1116,7 @@ router.post('/routes/:routeId/upload-icon', requireAdmin, upload.single('icon'),
     }
 
     // Check region access
-    const hasAccess = await checkRegionAccess(req.session.userId, route.region_id);
-    if (!hasAccess) {
+    if (req.admin.role !== 'super' && req.admin.region_id !== route.region_id) {
       return res.status(403).json({
         error: 'Access denied',
         message: `You do not have access to the ${route.region_name} region`
@@ -1180,8 +1179,7 @@ router.delete('/routes/:routeId/icon', requireAdmin, async (req, res) => {
     }
 
     // Check region access
-    const hasAccess = await checkRegionAccess(req.session.userId, route.region_id);
-    if (!hasAccess) {
+    if (req.admin.role !== 'super' && req.admin.region_id !== route.region_id) {
       return res.status(403).json({
         error: 'Access denied',
         message: `You do not have access to the ${route.region_name} region`
