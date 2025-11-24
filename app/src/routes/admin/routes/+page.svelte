@@ -17,6 +17,8 @@
   let deleteConfirm = null; // Track which ride is being confirmed for deletion
   let currentMonth = new Date();
   let selectedDates = [];
+  let uploadingIcon = false;
+  let iconFile = null;
 
   onMount(() => {
     token = localStorage.getItem('admin_token');
@@ -275,6 +277,84 @@
     }
   }
 
+  async function uploadIcon() {
+    if (!iconFile || !editing) {
+      error = 'Please select an image file';
+      return;
+    }
+
+    uploadingIcon = true;
+    error = '';
+    success = '';
+
+    try {
+      const formData = new FormData();
+      formData.append('icon', iconFile);
+
+      const res = await fetch(`${API_URL}/admin/routes/${editing.id}/upload-icon`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        error = data.error || 'Failed to upload icon';
+        return;
+      }
+
+      success = 'Start location icon updated successfully!';
+      editing.start_location_icon_url = data.data.start_location_icon_url;
+      iconFile = null;
+      await loadRoutes(); // Reload to show updated icon
+
+    } catch (err) {
+      error = 'Failed to upload icon';
+      console.error(err);
+    } finally {
+      uploadingIcon = false;
+    }
+  }
+
+  async function deleteIcon() {
+    if (!editing || !confirm('Remove the current start location icon?')) {
+      return;
+    }
+
+    uploadingIcon = true;
+    error = '';
+    success = '';
+
+    try {
+      const res = await fetch(`${API_URL}/admin/routes/${editing.id}/icon`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        error = data.error || 'Failed to delete icon';
+        return;
+      }
+
+      success = 'Start location icon removed successfully!';
+      editing.start_location_icon_url = null;
+      await loadRoutes(); // Reload to show change
+
+    } catch (err) {
+      error = 'Failed to delete icon';
+      console.error(err);
+    } finally {
+      uploadingIcon = false;
+    }
+  }
+
   async function addSelectedRides() {
     if (selectedDates.length === 0 || !editing) {
       return;
@@ -480,6 +560,57 @@
                 </select>
               </div>
             </div>
+          </div>
+
+          <!-- Start Location Icon -->
+          <div class="mb-6 pb-6 border-t border-warm-gray-200 pt-6">
+            <h3 class="text-base font-bold text-warm-gray-900 mb-2">Start Location Icon</h3>
+            <p class="text-sm text-warm-gray-600 mb-4">
+              Upload a custom icon (PNG/JPG, max 1MB) to display at the route's starting point
+            </p>
+
+            {#if editing.start_location_icon_url}
+              <div class="flex items-center gap-4 mb-4">
+                <img
+                  src={editing.start_location_icon_url}
+                  alt="Start location icon"
+                  class="w-24 h-24 object-contain rounded-lg border-2 border-warm-gray-200"
+                />
+                <div class="flex-1">
+                  <p class="text-sm text-warm-gray-700 mb-2">Current icon</p>
+                  <button
+                    on:click={deleteIcon}
+                    disabled={uploadingIcon}
+                    class="text-sm text-red-600 hover:text-red-800 font-medium"
+                  >
+                    Remove Icon
+                  </button>
+                </div>
+              </div>
+            {/if}
+
+            <div class="flex gap-3">
+              <input
+                type="file"
+                accept="image/png, image/jpeg, image/jpg"
+                on:change={(e) => iconFile = e.target.files[0]}
+                disabled={uploadingIcon}
+                class="flex-1 text-sm text-warm-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-warm-gray-100 file:text-warm-gray-700 hover:file:bg-warm-gray-200"
+              />
+              <button
+                on:click={uploadIcon}
+                disabled={uploadingIcon || !iconFile}
+                class="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 text-sm"
+              >
+                {uploadingIcon ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+
+            {#if iconFile}
+              <p class="text-xs text-warm-gray-600 mt-2">
+                Selected: {iconFile.name} ({(iconFile.size / 1024).toFixed(1)} KB)
+              </p>
+            {/if}
           </div>
 
           {#if error}

@@ -12,6 +12,8 @@
   // Date selection
   let selectedDates = [];
   let availableDates = [];
+  let uploadingIcon = false;
+  let iconFile = null;
 
   onMount(() => {
     // Check if access code is in URL or localStorage
@@ -179,6 +181,76 @@
       console.error(err);
     }
   }
+
+  async function uploadIcon() {
+    if (!iconFile) {
+      error = 'Please select an image file';
+      return;
+    }
+
+    uploadingIcon = true;
+    error = '';
+    success = '';
+
+    try {
+      const formData = new FormData();
+      formData.append('icon', iconFile);
+
+      const res = await fetch(`${API_URL}/routes/${accessCode}/upload-icon`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        error = data.error || 'Failed to upload icon';
+        return;
+      }
+
+      success = 'Start location icon updated successfully!';
+      route.start_location_icon_url = data.data.start_location_icon_url;
+      iconFile = null;
+
+    } catch (err) {
+      error = 'Failed to upload icon';
+      console.error(err);
+    } finally {
+      uploadingIcon = false;
+    }
+  }
+
+  async function deleteIcon() {
+    if (!confirm('Remove the current start location icon?')) {
+      return;
+    }
+
+    uploadingIcon = true;
+    error = '';
+    success = '';
+
+    try {
+      const res = await fetch(`${API_URL}/routes/${accessCode}/icon`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        error = data.error || 'Failed to delete icon';
+        return;
+      }
+
+      success = 'Start location icon removed successfully!';
+      route.start_location_icon_url = null;
+
+    } catch (err) {
+      error = 'Failed to delete icon';
+      console.error(err);
+    } finally {
+      uploadingIcon = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -268,6 +340,57 @@
               {error}
             </div>
           {/if}
+
+          <!-- Start Location Icon -->
+          <div class="mb-6 pb-6 border-b border-warm-gray-200">
+            <h2 class="text-lg font-bold text-warm-gray-900 mb-2">Start Location Icon</h2>
+            <p class="text-sm text-warm-gray-600 mb-4">
+              Upload a custom icon (PNG/JPG, max 1MB) to display at your route's starting point
+            </p>
+
+            {#if route.start_location_icon_url}
+              <div class="flex items-center gap-4 mb-4">
+                <img
+                  src={route.start_location_icon_url}
+                  alt="Start location icon"
+                  class="w-24 h-24 object-contain rounded-lg border-2 border-warm-gray-200"
+                />
+                <div class="flex-1">
+                  <p class="text-sm text-warm-gray-700 mb-2">Current icon</p>
+                  <button
+                    on:click={deleteIcon}
+                    disabled={uploadingIcon}
+                    class="text-sm text-red-600 hover:text-red-800 font-medium"
+                  >
+                    Remove Icon
+                  </button>
+                </div>
+              </div>
+            {/if}
+
+            <div class="flex gap-3">
+              <input
+                type="file"
+                accept="image/png, image/jpeg, image/jpg"
+                on:change={(e) => iconFile = e.target.files[0]}
+                disabled={uploadingIcon}
+                class="flex-1 text-sm text-warm-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-warm-gray-100 file:text-warm-gray-700 hover:file:bg-warm-gray-200"
+              />
+              <button
+                on:click={uploadIcon}
+                disabled={uploadingIcon || !iconFile}
+                class="btn btn-primary"
+              >
+                {uploadingIcon ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+
+            {#if iconFile}
+              <p class="text-xs text-warm-gray-600 mt-2">
+                Selected: {iconFile.name} ({(iconFile.size / 1024).toFixed(1)} KB)
+              </p>
+            {/if}
+          </div>
 
           <!-- Add More Dates -->
           <div class="mb-6">
