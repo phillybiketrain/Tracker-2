@@ -13,6 +13,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Validate Cloudinary configuration on startup
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  console.warn('⚠️  WARNING: Cloudinary environment variables not configured. Image uploads will fail.');
+  console.warn('   Required: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET');
+}
+
 // Configure multer for memory storage (we'll upload directly to Cloudinary)
 const storage = multer.memoryStorage();
 
@@ -43,6 +49,11 @@ export const upload = multer({
  * @returns {Promise<string>} - Cloudinary URL
  */
 export async function uploadToCloudinary(buffer, folder = 'route-icons') {
+  // Check if Cloudinary is configured
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    throw new Error('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
+  }
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -56,8 +67,10 @@ export async function uploadToCloudinary(buffer, folder = 'route-icons') {
       },
       (error, result) => {
         if (error) {
+          console.error('Cloudinary upload error:', error);
           reject(error);
         } else {
+          console.log(`✅ Uploaded to Cloudinary: ${result.secure_url}`);
           resolve(result.secure_url);
         }
       }
