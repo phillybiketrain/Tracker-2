@@ -113,21 +113,28 @@
     <div class="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
       <!-- Left: Text Content -->
       <div>
-        <h1 class="text-5xl md:text-6xl font-bold mb-6 text-gray-900 leading-tight">
-          Safer | Social | More Fun
+        <p class="text-xl mb-4 text-primary font-medium">Safer | Social | More Fun</p>
+        <h1 class="text-4xl md:text-5xl font-bold mb-6 text-gray-900 leading-tight">
+          It's a bike bus for commuters!
         </h1>
-        <h2 class="text-3xl font-semibold mb-6 text-primary">It's a bike bus for commuters!</h2>
-        <p class="text-lg text-gray-700 mb-8 leading-relaxed">
-          Join an organized group ride where participants can hop on at designated stops along the route,
-          just like traditional transit. Ride together, arrive together. Experience the joy of cycling
-          with the safety and camaraderie of a group.
+        <p class="text-lg text-gray-700 mb-4 leading-relaxed">
+          The Philly Bike Train is an organized group bike ride for commuting to work, school, or another common destination.
+        </p>
+        <p class="text-lg text-gray-700 mb-4 leading-relaxed">
+          We leave at a set time from the start, and you can join at the start or anywhere along the way, just like a regular bus or train. Use the tracker to catch the ride as is passes nearby you!
+        </p>
+        <p class="text-lg text-gray-700 mb-4 leading-relaxed">
+          Bike buses are a more fun, social, and safe commute.
+        </p>
+        <p class="text-xl font-semibold text-gray-900 mb-8">
+          Ride with us to get where you're going
         </p>
         <div class="flex gap-4 flex-wrap">
           <a href="/live" class="btn btn-primary text-lg px-8 py-4">
             Track Live Rides
           </a>
-          <a href="/create" class="btn btn-secondary text-lg px-8 py-4">
-            Create a Route
+          <a href="/browse" class="btn btn-secondary text-lg px-8 py-4">
+            Browse All Rides
           </a>
         </div>
       </div>
@@ -145,7 +152,7 @@
   </div>
 </div>
 
-<!-- Hero Section 2: How It Works -->
+<!-- Hero Section 2: About the Tracker -->
 <div class="bg-warm-gray-50">
   <div class="container mx-auto px-6 py-16">
     <div class="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
@@ -161,10 +168,9 @@
 
       <!-- Right: Text Content -->
       <div class="order-1 md:order-2">
-        <h2 class="text-4xl font-bold mb-6 text-gray-900">How It Works</h2>
+        <h2 class="text-4xl font-bold mb-6 text-gray-900">About the Tracker</h2>
         <p class="text-lg text-gray-700 mb-6 leading-relaxed">
-          Use our live tracker to catch the bike train as it passes near you! Simply find your route,
-          check the schedule, and join the group at any designated stop along the way.
+          Use our live tracker to catch the bike train as it passes near you! Watch live on your phone (no account needed) as the train approaches and hop on as it passes by.
         </p>
         <p class="text-lg text-gray-700 mb-8 leading-relaxed">
           Whether you're commuting to work, heading to school, or just exploring the city,
@@ -235,12 +241,10 @@
               </div>
 
               <a
-                href={`${API_URL}/rides/next?access_code=${route.access_code}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/ride/{nextRide.id}"
                 class="block text-center bg-primary hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
               >
-                Track Next Ride →
+                View Next Ride →
               </a>
             </div>
           </div>
