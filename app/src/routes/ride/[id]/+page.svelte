@@ -171,7 +171,12 @@
       <div class="mb-6">
         <a href="/" class="text-primary hover:text-secondary font-medium mb-3 inline-block">← Back to Browse</a>
         <div class="flex items-start justify-between gap-4 mb-3">
-          <h1 class="text-4xl font-bold text-warm-gray-900">{ride.route_name}</h1>
+          <div class="flex items-center gap-3">
+            {#if ride.start_location_icon_url}
+              <img src="{ride.start_location_icon_url}" alt="Route icon" class="w-12 h-12 object-contain rounded-lg" />
+            {/if}
+            <h1 class="text-4xl font-bold text-warm-gray-900">{ride.route_name}</h1>
+          </div>
           {#if ride.status === 'live'}
             <div class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-full">
               <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
@@ -188,7 +193,7 @@
       <div class="grid md:grid-cols-3 gap-6 mb-6">
         <div class="md:col-span-2">
           <div class="h-96 mb-4 rounded-2xl overflow-hidden">
-            <Map waypoints={ride.waypoints || []} showMarkers={false} />
+            <Map waypoints={ride.waypoints || []} showMarkers={true} startLocationIconUrl={ride.start_location_icon_url} />
           </div>
 
           {#if ride.route_description}
@@ -317,6 +322,7 @@
           bind:this={mapComponent}
           waypoints={ride.waypoints || []}
           {leaderLocation}
+          startLocationIconUrl={ride.start_location_icon_url}
         />
       </div>
 

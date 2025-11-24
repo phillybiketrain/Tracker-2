@@ -36,6 +36,7 @@
               departure_time: ride.departure_time,
               estimated_duration: ride.estimated_duration,
               preview_image_url: ride.preview_image_url,
+              start_location_icon_url: ride.start_location_icon_url,
               rides: []
             });
           }
@@ -215,7 +216,12 @@
 
             <!-- Route Info -->
             <div class="p-6">
-              <h3 class="text-2xl font-bold text-gray-900 mb-3">{route.name}</h3>
+              <div class="flex items-center gap-3 mb-3">
+                {#if route.start_location_icon_url}
+                  <img src="{route.start_location_icon_url}" alt="Route icon" class="w-10 h-10 object-contain rounded" />
+                {/if}
+                <h3 class="text-2xl font-bold text-gray-900">{route.name}</h3>
+              </div>
               {#if route.description}
                 <p class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-2">{route.description}</p>
               {/if}

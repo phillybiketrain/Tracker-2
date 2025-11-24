@@ -145,8 +145,14 @@
     // Generate dates from start to end of month
     const currentDate = new Date(startDate);
     while (currentDate <= lastDay) {
+      // Format date as YYYY-MM-DD in local timezone (not UTC)
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const dateValue = `${year}-${month}-${day}`;
+
       dates.push({
-        value: currentDate.toISOString().split('T')[0],
+        value: dateValue,
         day: currentDate.getDate(),
         weekday: currentDate.getDay(), // 0 = Sunday, 6 = Saturday
         dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),

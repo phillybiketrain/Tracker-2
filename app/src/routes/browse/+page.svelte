@@ -65,6 +65,7 @@
               departure_time: ride.departure_time,
               estimated_duration: ride.estimated_duration,
               preview_image_url: ride.preview_image_url,
+              start_location_icon_url: ride.start_location_icon_url,
               rides: []
             });
           }
@@ -224,7 +225,10 @@
             {/if}
 
             <!-- Route Name -->
-            <div class="mb-3">
+            <div class="mb-3 flex items-center gap-2">
+              {#if route.start_location_icon_url}
+                <img src="{route.start_location_icon_url}" alt="Route icon" class="w-8 h-8 object-contain rounded" />
+              {/if}
               <h3 class="text-lg font-bold text-warm-gray-900">{route.name}</h3>
             </div>
 
