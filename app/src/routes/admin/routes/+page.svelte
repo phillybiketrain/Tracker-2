@@ -235,7 +235,25 @@
 
   // Parse date string (YYYY-MM-DD) in local timezone
   function parseLocalDate(dateStr) {
-    const [year, month, day] = dateStr.split('-').map(Number);
+    // Handle edge cases
+    if (!dateStr || typeof dateStr !== 'string') {
+      console.error('Invalid date string:', dateStr);
+      return null;
+    }
+
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) {
+      console.error('Malformed date string:', dateStr);
+      return null;
+    }
+
+    const [year, month, day] = parts.map(Number);
+
+    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+      console.error('Invalid date components:', { year, month, day });
+      return null;
+    }
+
     return new Date(year, month - 1, day);
   }
 
@@ -450,6 +468,16 @@
       });
       const ridesData = await ridesRes.json();
       if (ridesData.success) {
+        console.log('Ride instances received:', ridesData.data);
+        // Log each ride to see if any have invalid dates
+        ridesData.data.forEach((ride, index) => {
+          console.log(`Ride ${index}:`, {
+            id: ride.id,
+            date: ride.date,
+            dateType: typeof ride.date,
+            departure_time: ride.departure_time
+          });
+        });
         rideInstances = ridesData.data;
       }
 
@@ -797,12 +825,17 @@
                 <div class="flex items-center justify-between p-3 border border-warm-gray-200 rounded hover:bg-warm-gray-50">
                   <div>
                     <div class="font-medium text-warm-gray-900">
-                      {parseLocalDate(ride.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
+                      {@const parsedDate = parseLocalDate(ride.date)}
+                      {#if parsedDate}
+                        {parsedDate.toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      {:else}
+                        <span class="text-red-600">Invalid Date: {ride.date}</span>
+                      {/if}
                     </div>
                     <div class="text-sm text-warm-gray-600 mt-1">
                       {ride.departure_time}
@@ -904,8 +937,9 @@
                     </div>
 
                     {#if route.last_ride_date}
+                      {@const parsedLastRideDate = parseLocalDate(route.last_ride_date)}
                       <div class="text-xs text-warm-gray-500 mt-1">
-                        Last ride: {parseLocalDate(route.last_ride_date).toLocaleDateString()}
+                        Last ride: {parsedLastRideDate ? parsedLastRideDate.toLocaleDateString() : 'Invalid Date'}
                       </div>
                     {/if}
                   </div>
