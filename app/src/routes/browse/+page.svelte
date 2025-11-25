@@ -6,7 +6,7 @@
   let rides = [];
   let routes = []; // Grouped by route
   let loading = true;
-  let filter = 'week'; // today | tomorrow | week | all
+  let filter = 'all'; // today | tomorrow | week | all
   let openOverlay = null; // Track which route overlay is open
   let currentPage = 1;
   let pageSize = 12;
