@@ -40,6 +40,7 @@ router.get('/live', async (req, res) => {
         r.estimated_duration,
         r.tag,
         r.preview_image_url,
+        r.start_location_icon_url,
         COUNT(DISTINCT rf.session_id) as follower_count
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
@@ -125,6 +126,7 @@ router.get('/', async (req, res) => {
         r.estimated_duration,
         r.tag,
         r.preview_image_url,
+        r.start_location_icon_url,
         COUNT(DISTINCT rf.session_id) as follower_count,
         COUNT(DISTINCT rint.session_id) as interest_count
       FROM ride_instances ri
@@ -173,6 +175,7 @@ router.get('/:id', async (req, res) => {
         r.waypoints,
         r.departure_time,
         r.estimated_duration,
+        r.start_location_icon_url,
         COUNT(DISTINCT rf.session_id) as follower_count,
         COUNT(DISTINCT rint.session_id) as interest_count
       FROM ride_instances ri

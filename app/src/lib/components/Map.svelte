@@ -164,12 +164,14 @@
             id: 'route',
             type: 'line',
             source: 'route',
+            layout: {
+              'line-cap': 'round',
+              'line-join': 'round'
+            },
             paint: {
               'line-color': '#E85D04',
               'line-width': 4,
-              'line-opacity': 0.9,
-              'line-cap': 'round',
-              'line-join': 'round'
+              'line-opacity': 0.9
             }
           });
         }
