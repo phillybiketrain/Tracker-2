@@ -46,7 +46,10 @@
         <!-- Desktop nav -->
         <div class="hidden md:flex gap-3">
           <a href="/" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Browse
+            Home
+          </a>
+          <a href="/browse" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Browse Rides
           </a>
           <a href="/create" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Create Route
@@ -85,7 +88,10 @@
       {#if mobileMenuOpen}
         <div class="md:hidden pt-4 pb-2 space-y-2">
           <a href="/" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
-            Browse
+            Home
+          </a>
+          <a href="/browse" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Browse Rides
           </a>
           <a href="/create" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Create Route
