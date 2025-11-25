@@ -15,7 +15,7 @@
   let newRideDate = '';
   let addingRide = false;
   let deleteConfirm = null; // Track which ride is being confirmed for deletion
-  let currentMonth = new Date();
+  let currentMonthOffset = 0; // 0 = current month, 1 = next month, etc.
   let selectedDates = [];
   let uploadingIcon = false;
   let iconFile = null;
@@ -73,7 +73,7 @@
     success = '';
 
     // Reset calendar to current month
-    currentMonth = new Date();
+    currentMonthOffset = 0;
     selectedDates = [];
 
     // Load ride instances for this route
@@ -233,48 +233,93 @@
     }
   }
 
-  function getCalendarDays() {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-
-    // First day of the month
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-
-    // Get day of week for first day (0 = Sunday)
-    const startingDayOfWeek = firstDay.getDay();
-
-    const days = [];
+  // Get dates for a specific month (0 = current, 1 = next, etc.)
+  function getDatesForMonth(monthOffset) {
+    const dates = [];
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
 
-    // Add empty slots for days before month starts
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push({ date: null, dateStr: null, isPast: true });
+    // Get first and last day of target month
+    const firstDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1);
+    const lastDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
+
+    // Start from today if we're in current month, otherwise from 1st
+    let startDate;
+    if (monthOffset === 0) {
+      startDate = today;
+    } else {
+      startDate = firstDay;
     }
 
-    // Add all days in month
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-      const date = new Date(year, month, day);
+    // Generate dates from start to end of month
+    const currentDate = new Date(startDate);
+    while (currentDate <= lastDay) {
       // Format date as YYYY-MM-DD in local timezone (not UTC)
-      const dateYear = date.getFullYear();
-      const dateMonth = String(date.getMonth() + 1).padStart(2, '0');
-      const dateDay = String(date.getDate()).padStart(2, '0');
-      const dateStr = `${dateYear}-${dateMonth}-${dateDay}`;
-      const isPast = date < today;
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const dateValue = `${year}-${month}-${day}`;
 
-      days.push({ date, dateStr, isPast });
+      dates.push({
+        value: dateValue,
+        day: currentDate.getDate(),
+        weekday: currentDate.getDay(), // 0 = Sunday, 6 = Saturday
+        dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
+        fullLabel: currentDate.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        }),
+        isPast: currentDate < today
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    return days;
+    return dates;
+  }
+
+  // Group dates by week for calendar layout
+  function getCalendarWeeks(dates) {
+    if (dates.length === 0) return [];
+
+    const weeks = [];
+    let currentWeek = new Array(7).fill(null);
+
+    dates.forEach((date, index) => {
+      const dayOfWeek = date.weekday;
+
+      // First date: fill empty cells before it
+      if (index === 0) {
+        currentWeek = new Array(7).fill(null);
+      }
+
+      currentWeek[dayOfWeek] = date;
+
+      // End of week (Saturday) or last date
+      if (dayOfWeek === 6 || index === dates.length - 1) {
+        weeks.push([...currentWeek]);
+        currentWeek = new Array(7).fill(null);
+      }
+    });
+
+    return weeks;
+  }
+
+  // Get month name for display
+  function getMonthName(monthOffset) {
+    const today = new Date();
+    const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    return targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
 
   function nextMonth() {
-    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+    currentMonthOffset++;
   }
 
   function prevMonth() {
-    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+    if (currentMonthOffset > 0) {
+      currentMonthOffset--;
+    }
   }
 
   function toggleDate(dateStr) {
@@ -284,6 +329,8 @@
       selectedDates = [...selectedDates, dateStr];
     }
   }
+
+  $: availableDates = getDatesForMonth(currentMonthOffset);
 
   async function uploadIcon() {
     if (!iconFile || !editing) {
@@ -664,12 +711,13 @@
             <div class="flex items-center justify-between mb-3">
               <button
                 on:click={prevMonth}
-                class="px-3 py-1 border border-warm-gray-300 rounded hover:bg-white text-sm font-medium"
+                disabled={currentMonthOffset === 0}
+                class="px-3 py-1 border border-warm-gray-300 rounded hover:bg-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ← Prev
               </button>
               <div class="font-medium text-warm-gray-900">
-                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {getMonthName(currentMonthOffset)}
               </div>
               <button
                 on:click={nextMonth}
@@ -691,25 +739,30 @@
             </div>
 
             <!-- Calendar Grid -->
-            <div class="grid grid-cols-7 gap-1 mb-3">
-              {#each getCalendarDays() as day}
-                {#if day.date === null}
-                  <div class="aspect-square"></div>
-                {:else}
-                  <button
-                    on:click={() => toggleDate(day.dateStr)}
-                    disabled={day.isPast}
-                    class="aspect-square flex items-center justify-center text-sm rounded transition-colors {
-                      day.isPast
-                        ? 'text-warm-gray-300 cursor-not-allowed'
-                        : selectedDates.includes(day.dateStr)
-                        ? 'bg-primary text-white font-medium'
-                        : 'hover:bg-warm-gray-100 text-warm-gray-900'
-                    }"
-                  >
-                    {day.date.getDate()}
-                  </button>
-                {/if}
+            <div class="mb-3">
+              {#each getCalendarWeeks(availableDates) as week}
+                <div class="grid grid-cols-7 gap-1 mb-1">
+                  {#each week as date}
+                    {#if date}
+                      <button
+                        on:click={() => toggleDate(date.value)}
+                        disabled={date.isPast}
+                        class="aspect-square flex items-center justify-center text-sm rounded transition-colors {
+                          date.isPast
+                            ? 'text-warm-gray-300 cursor-not-allowed'
+                            : selectedDates.includes(date.value)
+                            ? 'bg-primary text-white font-medium'
+                            : 'hover:bg-warm-gray-100 text-warm-gray-900'
+                        }"
+                        title={date.fullLabel}
+                      >
+                        {date.day}
+                      </button>
+                    {:else}
+                      <div class="aspect-square"></div>
+                    {/if}
+                  {/each}
+                </div>
               {/each}
             </div>
 
