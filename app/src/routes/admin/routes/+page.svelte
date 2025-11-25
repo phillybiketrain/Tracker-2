@@ -233,6 +233,12 @@
     }
   }
 
+  // Parse date string (YYYY-MM-DD) in local timezone
+  function parseLocalDate(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   // Get dates for a specific month (0 = current, 1 = next, etc.)
   function getDatesForMonth(monthOffset) {
     const dates = [];
@@ -791,7 +797,7 @@
                 <div class="flex items-center justify-between p-3 border border-warm-gray-200 rounded hover:bg-warm-gray-50">
                   <div>
                     <div class="font-medium text-warm-gray-900">
-                      {new Date(ride.date).toLocaleDateString('en-US', {
+                      {parseLocalDate(ride.date).toLocaleDateString('en-US', {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric',
@@ -899,7 +905,7 @@
 
                     {#if route.last_ride_date}
                       <div class="text-xs text-warm-gray-500 mt-1">
-                        Last ride: {new Date(route.last_ride_date).toLocaleDateString()}
+                        Last ride: {parseLocalDate(route.last_ride_date).toLocaleDateString()}
                       </div>
                     {/if}
                   </div>

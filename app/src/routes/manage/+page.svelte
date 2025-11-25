@@ -146,8 +146,14 @@
     }
   }
 
+  // Parse date string (YYYY-MM-DD) in local timezone
+  function parseLocalDate(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return parseLocalDate(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric'

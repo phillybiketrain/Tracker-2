@@ -41,6 +41,12 @@
     }
   }
 
+  // Parse date string (YYYY-MM-DD) in local timezone
+  function parseLocalDate(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   function startTracking() {
     if (!ride) return;
 
@@ -215,7 +221,7 @@
                     <div class="flex items-center justify-between">
                       <div>
                         <div class="font-medium text-warm-gray-900">
-                          {new Date(otherRide.date).toLocaleDateString('en-US', {
+                          {parseLocalDate(otherRide.date).toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric'
@@ -244,7 +250,7 @@
             <div class="space-y-3">
               <div>
                 <div class="text-xs text-warm-gray-500 mb-1">Date</div>
-                <div class="font-semibold text-warm-gray-900">{new Date(ride.date).toLocaleDateString()}</div>
+                <div class="font-semibold text-warm-gray-900">{parseLocalDate(ride.date).toLocaleDateString()}</div>
               </div>
               <div>
                 <div class="text-xs text-warm-gray-500 mb-1">Departure</div>

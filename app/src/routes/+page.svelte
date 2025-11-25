@@ -66,8 +66,14 @@
     loadRides();
   });
 
+  // Parse date string (YYYY-MM-DD) in local timezone
+  function parseLocalDate(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   function formatDate(dateStr) {
-    const date = new Date(dateStr);
+    const date = parseLocalDate(dateStr);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
