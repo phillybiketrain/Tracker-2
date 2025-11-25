@@ -822,10 +822,10 @@
           {#if rideInstances.length > 0}
             <div class="space-y-2 max-h-96 overflow-y-auto">
               {#each rideInstances as ride}
+                {@const parsedDate = parseLocalDate(ride.date)}
                 <div class="flex items-center justify-between p-3 border border-warm-gray-200 rounded hover:bg-warm-gray-50">
                   <div>
                     <div class="font-medium text-warm-gray-900">
-                      {@const parsedDate = parseLocalDate(ride.date)}
                       {#if parsedDate}
                         {parsedDate.toLocaleDateString('en-US', {
                           weekday: 'short',
