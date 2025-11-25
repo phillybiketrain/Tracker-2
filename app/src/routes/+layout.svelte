@@ -122,7 +122,7 @@
   <footer class="bg-warm-gray-50 border-t border-warm-gray-200 py-6 mt-auto">
     <div class="container mx-auto px-6 text-center">
       <p class="text-sm text-warm-gray-600">
-        © 2024 Philly Bike Train · Fixed-route bike transit
+        From your friends at the Philly Bike Train
       </p>
     </div>
   </footer>

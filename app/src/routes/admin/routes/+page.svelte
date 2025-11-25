@@ -72,6 +72,10 @@
     error = '';
     success = '';
 
+    // Reset calendar to current month
+    currentMonth = new Date();
+    selectedDates = [];
+
     // Load ride instances for this route
     try {
       const res = await fetch(`${API_URL}/rides?route_id=${route.id}&days=365`, {
