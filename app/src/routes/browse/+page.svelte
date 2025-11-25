@@ -208,8 +208,13 @@
         <a href="/ride/{nextRide.id}" class="card hover:shadow-md transition-all bg-white relative block cursor-pointer p-0">
           <!-- Route Map Preview -->
           {#if route.waypoints && route.waypoints.length > 0}
-            <div class="h-32 w-full overflow-hidden">
+            <div class="h-32 w-full overflow-hidden relative">
               <RoutePreview waypoints={route.waypoints} previewImageUrl={route.preview_image_url} />
+              {#if route.start_location_icon_url}
+                <div class="absolute top-2 left-2 w-10 h-10 bg-white rounded-lg shadow-lg p-1.5 flex items-center justify-center">
+                  <img src="{route.start_location_icon_url}" alt="Route icon" class="w-full h-full object-contain" />
+                </div>
+              {/if}
             </div>
           {/if}
 
@@ -225,10 +230,7 @@
             {/if}
 
             <!-- Route Name -->
-            <div class="mb-3 flex items-center gap-2">
-              {#if route.start_location_icon_url}
-                <img src="{route.start_location_icon_url}" alt="Route icon" class="w-8 h-8 object-contain rounded" />
-              {/if}
+            <div class="mb-3">
               <h3 class="text-lg font-bold text-warm-gray-900">{route.name}</h3>
             </div>
 

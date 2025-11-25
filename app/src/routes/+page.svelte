@@ -200,8 +200,13 @@
           <div class="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-primary transition-all hover:shadow-lg">
             <!-- Route Image/Map Preview -->
             {#if route.waypoints && route.waypoints.length > 0}
-              <div class="h-64 w-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+              <div class="h-64 w-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 relative">
                 <RoutePreview waypoints={route.waypoints} previewImageUrl={route.preview_image_url} />
+                {#if route.start_location_icon_url}
+                  <div class="absolute top-3 left-3 w-20 h-20 bg-white rounded-xl shadow-xl p-2 flex items-center justify-center">
+                    <img src="{route.start_location_icon_url}" alt="Route icon" class="w-full h-full object-contain" />
+                  </div>
+                {/if}
               </div>
             {:else}
               <div class="h-64 w-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
@@ -216,10 +221,7 @@
 
             <!-- Route Info -->
             <div class="p-6">
-              <div class="flex items-center gap-3 mb-3">
-                {#if route.start_location_icon_url}
-                  <img src="{route.start_location_icon_url}" alt="Route icon" class="w-10 h-10 object-contain rounded" />
-                {/if}
+              <div class="mb-3">
                 <h3 class="text-2xl font-bold text-gray-900">{route.name}</h3>
               </div>
               {#if route.description}
