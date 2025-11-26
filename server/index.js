@@ -1,6 +1,7 @@
 /**
  * Philly Bike Train - Express Server
  * Handles REST API and WebSocket connections for GPS tracking
+ * v2.0
  */
 
 import express from 'express';
