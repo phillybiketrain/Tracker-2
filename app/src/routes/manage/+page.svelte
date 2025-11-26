@@ -11,7 +11,7 @@
 
   // Date selection
   let selectedDates = [];
-  let availableDates = [];
+  let currentMonthOffset = 0; // 0 = current month, 1 = next month, etc.
   let uploadingIcon = false;
   let iconFile = null;
 
@@ -30,9 +30,6 @@
         loadRoute();
       }
     }
-
-    // Generate next 30 days for date selection
-    availableDates = getNext30Days();
   });
 
   async function loadRoute() {
@@ -118,33 +115,103 @@
     }
   }
 
-  function getNext30Days() {
+  // Get dates for a specific month (0 = current, 1 = next, etc.)
+  function getDatesForMonth(monthOffset) {
     const dates = [];
     const today = new Date();
+    const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
 
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
+    // Get first and last day of target month
+    const firstDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1);
+    const lastDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
+
+    // Start from today if we're in current month, otherwise from 1st
+    let startDate;
+    if (monthOffset === 0) {
+      startDate = today;
+    } else {
+      startDate = firstDay;
+    }
+
+    // Generate dates from start to end of month
+    const currentDate = new Date(startDate);
+    while (currentDate <= lastDay) {
+      // Format date as YYYY-MM-DD in local timezone (not UTC)
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const dateValue = `${year}-${month}-${day}`;
+
       dates.push({
-        value: date.toISOString().split('T')[0],
-        label: date.toLocaleDateString('en-US', {
+        value: dateValue,
+        day: currentDate.getDate(),
+        weekday: currentDate.getDay(), // 0 = Sunday, 6 = Saturday
+        dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
+        fullLabel: currentDate.toLocaleDateString('en-US', {
           weekday: 'short',
           month: 'short',
           day: 'numeric'
         })
       });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return dates;
   }
 
-  function toggleDate(date) {
-    if (selectedDates.includes(date)) {
-      selectedDates = selectedDates.filter(d => d !== date);
-    } else {
-      selectedDates = [...selectedDates, date];
+  // Group dates by week for calendar layout
+  function getCalendarWeeks(dates) {
+    if (dates.length === 0) return [];
+
+    const weeks = [];
+    let currentWeek = new Array(7).fill(null);
+
+    dates.forEach((date, index) => {
+      const dayOfWeek = date.weekday;
+
+      // First date: fill empty cells before it
+      if (index === 0) {
+        currentWeek = new Array(7).fill(null);
+      }
+
+      currentWeek[dayOfWeek] = date;
+
+      // End of week (Saturday) or last date
+      if (dayOfWeek === 6 || index === dates.length - 1) {
+        weeks.push([...currentWeek]);
+        currentWeek = new Array(7).fill(null);
+      }
+    });
+
+    return weeks;
+  }
+
+  // Get month name for display
+  function getMonthName(monthOffset) {
+    const today = new Date();
+    const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    return targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  function nextMonth() {
+    currentMonthOffset++;
+  }
+
+  function prevMonth() {
+    if (currentMonthOffset > 0) {
+      currentMonthOffset--;
     }
   }
+
+  function toggleDate(dateStr) {
+    if (selectedDates.includes(dateStr)) {
+      selectedDates = selectedDates.filter(d => d !== dateStr);
+    } else {
+      selectedDates = [...selectedDates, dateStr];
+    }
+  }
+
+  $: availableDates = getDatesForMonth(currentMonthOffset);
 
   // Parse date string (YYYY-MM-DD or ISO timestamp) in local timezone
   function parseLocalDate(dateStr) {
@@ -404,17 +471,65 @@
           <div class="mb-6">
             <h2 class="text-lg font-bold text-warm-gray-900 mb-4">Add More Ride Dates</h2>
 
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
-              {#each availableDates as date}
-                <button
-                  on:click={() => toggleDate(date.value)}
-                  disabled={loading}
-                  class="px-3 py-2 text-sm rounded border transition-all {selectedDates.includes(date.value)
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white text-warm-gray-700 border-warm-gray-300 hover:border-primary'}"
-                >
-                  {date.label}
-                </button>
+            {#if selectedDates.length > 0}
+              <div class="mb-3 text-sm text-warm-gray-600">
+                <span class="font-medium">{selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} selected</span>
+              </div>
+            {/if}
+
+            <!-- Month Navigation -->
+            <div class="flex items-center justify-between mb-3">
+              <button
+                on:click={prevMonth}
+                disabled={currentMonthOffset === 0}
+                class="px-3 py-1 border border-warm-gray-300 rounded hover:bg-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ← Prev
+              </button>
+              <div class="font-medium text-warm-gray-900">
+                {getMonthName(currentMonthOffset)}
+              </div>
+              <button
+                on:click={nextMonth}
+                class="px-3 py-1 border border-warm-gray-300 rounded hover:bg-white text-sm font-medium"
+              >
+                Next →
+              </button>
+            </div>
+
+            <!-- Weekday Headers -->
+            <div class="grid grid-cols-7 gap-1 mb-1">
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Sun</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Mon</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Tue</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Wed</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Thu</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Fri</div>
+              <div class="text-center text-xs font-semibold text-warm-gray-600 py-1">Sat</div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="mb-3">
+              {#each getCalendarWeeks(availableDates) as week}
+                <div class="grid grid-cols-7 gap-1 mb-1">
+                  {#each week as date}
+                    {#if date}
+                      <button
+                        on:click={() => toggleDate(date.value)}
+                        class="aspect-square flex items-center justify-center text-sm rounded transition-colors {
+                          selectedDates.includes(date.value)
+                            ? 'bg-primary text-white font-medium'
+                            : 'hover:bg-warm-gray-100 text-warm-gray-900'
+                        }"
+                        title={date.fullLabel}
+                      >
+                        {date.day}
+                      </button>
+                    {:else}
+                      <div class="aspect-square"></div>
+                    {/if}
+                  {/each}
+                </div>
               {/each}
             </div>
 

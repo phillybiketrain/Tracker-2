@@ -218,16 +218,11 @@
           {#if route.waypoints && route.waypoints.length > 0}
             <div class="h-32 w-full overflow-hidden relative">
               <RoutePreview waypoints={route.waypoints} previewImageUrl={route.preview_image_url} />
-              {#if route.start_location_icon_url}
-                <div class="absolute top-2 left-2 w-10 h-10 bg-white rounded-lg shadow-lg p-1.5 flex items-center justify-center">
-                  <img src="{route.start_location_icon_url}" alt="Route icon" class="w-full h-full object-contain" />
-                </div>
-              {/if}
             </div>
           {/if}
 
           <!-- Card Content -->
-          <div class="p-6">
+          <div class="p-6 relative">
             {#if nextRide.status === 'live'}
               <!-- Live Badge - Top Right -->
               <div class="absolute top-4 right-4 z-10">
@@ -285,6 +280,13 @@
                 </div>
               {/if}
             </div>
+
+            <!-- Route Icon - Bottom Right -->
+            {#if route.start_location_icon_url}
+              <div class="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-lg shadow-lg p-1.5 flex items-center justify-center border border-warm-gray-100">
+                <img src="{route.start_location_icon_url}" alt="Route icon" class="w-full h-full object-contain" />
+              </div>
+            {/if}
           </div>
         </a>
       {/each}

@@ -69,7 +69,7 @@
         <p class="text-warm-gray-600 mb-8 text-lg">
           Check back soon or browse upcoming rides
         </p>
-        <a href="/" class="btn btn-primary inline-block">
+        <a href="/browse" class="btn btn-primary inline-block">
           Browse Upcoming Rides
         </a>
       </div>
