@@ -46,8 +46,8 @@
         const allRoutes = Array.from(routeMap.values());
         totalRoutes = allRoutes.length;
 
-        // Get featured routes (top 5 for hero)
-        featuredRoutes = allRoutes.slice(0, 5);
+        // Get featured routes (top 6 for hero)
+        featuredRoutes = allRoutes.slice(0, 6);
 
         // Paginate remaining routes
         const startIdx = (currentPage - 1) * pageSize;
