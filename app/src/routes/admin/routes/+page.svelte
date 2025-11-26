@@ -233,7 +233,7 @@
     }
   }
 
-  // Parse date string (YYYY-MM-DD) in local timezone
+  // Parse date string (YYYY-MM-DD or ISO timestamp) in local timezone
   function parseLocalDate(dateStr) {
     // Handle edge cases
     if (!dateStr || typeof dateStr !== 'string') {
@@ -241,7 +241,10 @@
       return null;
     }
 
-    const parts = dateStr.split('-');
+    // Extract just the date portion if it's an ISO timestamp
+    const datePart = dateStr.split('T')[0];
+
+    const parts = datePart.split('-');
     if (parts.length !== 3) {
       console.error('Malformed date string:', dateStr);
       return null;

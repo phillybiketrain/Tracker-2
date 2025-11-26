@@ -146,9 +146,11 @@
     }
   }
 
-  // Parse date string (YYYY-MM-DD) in local timezone
+  // Parse date string (YYYY-MM-DD or ISO timestamp) in local timezone
   function parseLocalDate(dateStr) {
-    const [year, month, day] = dateStr.split('-').map(Number);
+    // Extract just the date portion if it's an ISO timestamp
+    const datePart = dateStr.split('T')[0];
+    const [year, month, day] = datePart.split('-').map(Number);
     return new Date(year, month - 1, day);
   }
 
