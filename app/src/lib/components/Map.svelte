@@ -189,6 +189,30 @@
       }
       map.removeSource('route');
     }
+
+    // Fit map to show all waypoints
+    if (waypoints.length > 0 && !onMapClick) {
+      // Only auto-fit if not in create/edit mode (onMapClick is used for creating routes)
+      const bounds = new mapboxgl.LngLatBounds();
+      waypoints.forEach(wp => {
+        bounds.extend([wp.lng, wp.lat]);
+      });
+
+      // Wait for map to be loaded before fitting bounds
+      const fitBounds = () => {
+        map.fitBounds(bounds, {
+          padding: { top: 50, bottom: 50, left: 50, right: 50 },
+          maxZoom: 15,
+          duration: 1000
+        });
+      };
+
+      if (map.loaded()) {
+        fitBounds();
+      } else {
+        map.once('load', fitBounds);
+      }
+    }
   }
 
   // Update leader location marker
