@@ -148,14 +148,9 @@
         </div>
       </div>
 
-      <!-- Right: Image Placeholder -->
-      <div class="bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl h-96 flex items-center justify-center shadow-lg">
-        <div class="text-center text-blue-600">
-          <svg class="w-24 h-24 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <p class="text-sm font-medium">Hero Image</p>
-        </div>
+      <!-- Right: Hero Image -->
+      <div class="rounded-2xl h-96 overflow-hidden shadow-lg">
+        <img src="/photos/hero.avif" alt="Philly Bike Train riders" class="w-full h-full object-cover" />
       </div>
     </div>
   </div>
@@ -165,14 +160,9 @@
 <div class="bg-warm-gray-50">
   <div class="container mx-auto px-6 py-16">
     <div class="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
-      <!-- Left: Image Placeholder -->
-      <div class="bg-gradient-to-br from-green-100 to-green-200 rounded-2xl h-96 flex items-center justify-center shadow-lg order-2 md:order-1">
-        <div class="text-center text-green-600">
-          <svg class="w-24 h-24 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          <p class="text-sm font-medium">Group Ride Image</p>
-        </div>
+      <!-- Left: Group Ride Image -->
+      <div class="rounded-2xl h-96 overflow-hidden shadow-lg order-2 md:order-1">
+        <img src="/photos/group.avif" alt="Group bike ride" class="w-full h-full object-cover" />
       </div>
 
       <!-- Right: Text Content -->
@@ -283,61 +273,36 @@
       <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- Winter -->
         <div class="group">
-          <div class="bg-gradient-to-br from-blue-200 to-blue-300 rounded-xl h-64 flex items-center justify-center overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-            <div class="text-center text-blue-700">
-              <svg class="w-20 h-20 mx-auto mb-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <p class="text-lg font-bold">Winter</p>
-            </div>
+          <div class="rounded-xl h-64 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+            <img src="/photos/winter.avif" alt="Winter bike ride" class="w-full h-full object-cover" />
           </div>
         </div>
 
         <!-- Spring -->
         <div class="group">
-          <div class="bg-gradient-to-br from-green-200 to-green-300 rounded-xl h-64 flex items-center justify-center overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-            <div class="text-center text-green-700">
-              <svg class="w-20 h-20 mx-auto mb-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              <p class="text-lg font-bold">Spring</p>
-            </div>
+          <div class="rounded-xl h-64 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+            <img src="/photos/spring.avif" alt="Spring bike ride" class="w-full h-full object-cover" />
           </div>
         </div>
 
         <!-- Summer -->
         <div class="group">
-          <div class="bg-gradient-to-br from-yellow-200 to-yellow-300 rounded-xl h-64 flex items-center justify-center overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-            <div class="text-center text-yellow-700">
-              <svg class="w-20 h-20 mx-auto mb-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              <p class="text-lg font-bold">Summer</p>
-            </div>
+          <div class="rounded-xl h-64 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+            <img src="/photos/summer.avif" alt="Summer bike ride" class="w-full h-full object-cover" />
           </div>
         </div>
 
         <!-- Fall -->
         <div class="group">
-          <div class="bg-gradient-to-br from-orange-200 to-orange-300 rounded-xl h-64 flex items-center justify-center overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-            <div class="text-center text-orange-700">
-              <svg class="w-20 h-20 mx-auto mb-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-              </svg>
-              <p class="text-lg font-bold">Fall</p>
-            </div>
+          <div class="rounded-xl h-64 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+            <img src="/photos/fall.avif" alt="Fall bike ride" class="w-full h-full object-cover" />
           </div>
         </div>
       </div>
 
       <!-- Special Events -->
-      <div class="bg-gradient-to-br from-purple-200 to-purple-300 rounded-xl h-80 flex items-center justify-center overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-        <div class="text-center text-purple-700">
-          <svg class="w-24 h-24 mx-auto mb-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-          </svg>
-          <p class="text-2xl font-bold">Special Events</p>
-        </div>
+      <div class="rounded-xl h-80 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+        <img src="/photos/special_events.avif" alt="Special events bike rides" class="w-full h-full object-cover" />
       </div>
     </div>
   </div>
