@@ -258,6 +258,12 @@
                 <div class="text-xs text-warm-gray-500 mb-1">Departure</div>
                 <div class="font-semibold text-warm-gray-900">{ride.departure_time}</div>
               </div>
+              {#if ride.distance_miles}
+                <div>
+                  <div class="text-xs text-warm-gray-500 mb-1">Distance</div>
+                  <div class="font-semibold text-warm-gray-900">{ride.distance_miles} miles</div>
+                </div>
+              {/if}
               {#if ride.estimated_duration}
                 <div>
                   <div class="text-xs text-warm-gray-500 mb-1">Duration</div>

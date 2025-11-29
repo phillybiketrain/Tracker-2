@@ -8,6 +8,7 @@ import { query, queryOne, queryAll } from '../db/client.js';
 import { z } from 'zod';
 import { generateRoutePreviewUrl } from '../utils/mapbox.js';
 import { upload, uploadToCloudinary, deleteFromCloudinary } from '../utils/upload.js';
+import { calculateRouteDistance } from '../utils/geo.js';
 
 const router = express.Router();
 
@@ -61,14 +62,17 @@ router.post('/', async (req, res) => {
     // Generate static preview image URL
     const previewImageUrl = generateRoutePreviewUrl(data.waypoints);
 
+    // Calculate route distance
+    const distanceMiles = calculateRouteDistance(data.waypoints);
+
     // Create route (pending approval by default)
     const route = await queryOne(`
       INSERT INTO routes (
         access_code, name, description, waypoints,
         departure_time, estimated_duration, creator_email,
-        status, tag, region_id, preview_image_url
+        status, tag, region_id, preview_image_url, distance_miles
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `, [
       accessCode.code,
@@ -81,7 +85,8 @@ router.post('/', async (req, res) => {
       'pending', // Requires admin approval
       data.tag || 'community',
       region.id,
-      previewImageUrl
+      previewImageUrl,
+      distanceMiles
     ]);
 
     console.log(`✅ Route created: ${route.name} (${route.access_code})`);

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS routes (
   waypoints       JSONB NOT NULL,           -- GeoJSON LineString
   departure_time  TIME NOT NULL,            -- e.g., 08:00
   estimated_duration INTERVAL,              -- e.g., '45 minutes'
+  distance_miles  DECIMAL(5,1),             -- Calculated route distance in miles
 
   -- Metadata
   creator_email   TEXT,
