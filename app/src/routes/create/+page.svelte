@@ -84,7 +84,7 @@
           description,
           waypoints,
           departure_time: departureTime,
-          estimated_duration: estimatedDuration,
+          estimated_duration: estimatedDuration ? `${estimatedDuration} min` : '',
           tag: routeTag
         })
       });
