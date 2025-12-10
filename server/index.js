@@ -19,6 +19,9 @@ import subscriptionsRouter from './routes/subscriptions.js';
 // Import scheduler
 import { startWeeklyDigestScheduler } from './services/scheduler.js';
 
+// Import database client
+import { query } from './db/client.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -117,7 +120,21 @@ io.on('connection', (socket) => {
     socket.join(accessCode);
 
     // Mark ride instance as 'live' in database
-    // TODO: Update ride_instances status to 'live'
+    try {
+      await query(`
+        UPDATE ride_instances ri
+        SET status = 'live'
+        FROM routes r
+        WHERE ri.route_id = r.id
+          AND r.access_code = $1
+          AND ri.date = CURRENT_DATE
+          AND ri.status = 'scheduled'
+      `, [accessCode]);
+
+      console.log(`✅ Ride ${accessCode} marked as live in database`);
+    } catch (error) {
+      console.error(`❌ Failed to mark ride ${accessCode} as live:`, error);
+    }
 
     socket.emit('ride:started', { accessCode });
   });
@@ -132,7 +149,21 @@ io.on('connection', (socket) => {
     socket.leave(accessCode);
 
     // Mark ride instance as 'completed'
-    // TODO: Update ride_instances status to 'completed'
+    try {
+      await query(`
+        UPDATE ride_instances ri
+        SET status = 'completed'
+        FROM routes r
+        WHERE ri.route_id = r.id
+          AND r.access_code = $1
+          AND ri.date = CURRENT_DATE
+          AND ri.status = 'live'
+      `, [accessCode]);
+
+      console.log(`✅ Ride ${accessCode} marked as completed in database`);
+    } catch (error) {
+      console.error(`❌ Failed to mark ride ${accessCode} as completed:`, error);
+    }
 
     // Notify all followers
     socket.to(accessCode).emit('ride:ended', { accessCode });
