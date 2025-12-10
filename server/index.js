@@ -120,6 +120,7 @@ io.on('connection', (socket) => {
     socket.join(accessCode);
 
     // Mark ride instance as 'live' in database
+    // Allow broadcasting any scheduled ride, regardless of date
     try {
       await query(`
         UPDATE ride_instances ri
@@ -127,8 +128,9 @@ io.on('connection', (socket) => {
         FROM routes r
         WHERE ri.route_id = r.id
           AND r.access_code = $1
-          AND ri.date = CURRENT_DATE
           AND ri.status = 'scheduled'
+        ORDER BY ri.date DESC
+        LIMIT 1
       `, [accessCode]);
 
       console.log(`✅ Ride ${accessCode} marked as live in database`);
@@ -149,6 +151,7 @@ io.on('connection', (socket) => {
     socket.leave(accessCode);
 
     // Mark ride instance as 'completed'
+    // Update any live ride with this access code, regardless of date
     try {
       await query(`
         UPDATE ride_instances ri
@@ -156,7 +159,6 @@ io.on('connection', (socket) => {
         FROM routes r
         WHERE ri.route_id = r.id
           AND r.access_code = $1
-          AND ri.date = CURRENT_DATE
           AND ri.status = 'live'
       `, [accessCode]);
 
