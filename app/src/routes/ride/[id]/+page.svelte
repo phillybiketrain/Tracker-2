@@ -297,57 +297,54 @@
     </div>
 
   {:else}
-    <!-- Live Tracking View - Optimized for mobile -->
-    <div class="mb-6">
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-3">
-          <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-          <h1 class="text-4xl font-bold text-warm-gray-900">Live Tracking</h1>
+    <!-- Live Tracking View - Mobile Optimized -->
+    <div class="fixed inset-0 flex flex-col bg-warm-gray-50">
+      <!-- Compact Header -->
+      <div class="flex items-center justify-between px-4 py-2 bg-white border-b border-warm-gray-200">
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <h1 class="text-[1.125rem] font-bold text-warm-gray-900">Tracking Live</h1>
         </div>
-        <button on:click={stopTracking} class="btn btn-danger">
+        <button on:click={stopTracking} class="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
           Stop
         </button>
       </div>
-      <p class="text-warm-gray-600 text-lg font-semibold">{ride.route_name}</p>
-    </div>
 
-    <div class="grid grid-cols-3 gap-4 mb-6">
-      <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-        <div class="text-xs text-warm-gray-500 mb-2">Followers</div>
-        <div class="text-4xl font-bold text-warm-gray-900">{followerCount}</div>
-      </div>
-
-      <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-        <div class="text-xs text-warm-gray-500 mb-2">GPS</div>
-        <div class="text-xl font-bold mt-1 {leaderLocation ? 'text-green-600' : 'text-warm-gray-400'}">
-          {leaderLocation ? 'Active' : 'Waiting'}
+      <!-- Compact Info Bar -->
+      <div class="px-4 py-2 bg-white border-b border-warm-gray-200">
+        <div class="flex items-center justify-between text-sm">
+          <span class="font-medium text-warm-gray-900">{ride.route_name}</span>
+          <div class="flex items-center gap-4 text-warm-gray-600">
+            <span>{followerCount} tracking</span>
+            {#if ride.estimated_duration}
+              <span>~{ride.estimated_duration}</span>
+            {/if}
+          </div>
         </div>
       </div>
 
-      <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-        <div class="text-xs text-warm-gray-500 mb-2">Updated</div>
-        <div class="text-lg font-bold text-warm-gray-900 mt-1">{getTimeSinceUpdate()}</div>
-      </div>
-    </div>
-
-    <div class="relative">
-      <div class="h-[600px] rounded-2xl overflow-hidden">
+      <!-- Full Screen Map with Center Button -->
+      <div class="flex-1 relative">
         <Map
           bind:this={mapComponent}
           waypoints={ride.waypoints || []}
           {leaderLocation}
           showMarkers={false}
         />
-      </div>
 
-      {#if leaderLocation}
-        <button
-          on:click={centerOnLeader}
-          class="absolute bottom-6 right-6 btn btn-primary shadow-lg"
-        >
-          Center on Leader
-        </button>
-      {/if}
+        {#if leaderLocation}
+          <button
+            on:click={centerOnLeader}
+            class="absolute bottom-6 right-4 px-4 py-2 bg-primary hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg transition-colors flex items-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Center on Leader
+          </button>
+        {/if}
+      </div>
     </div>
   {/if}
 
