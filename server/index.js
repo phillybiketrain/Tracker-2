@@ -28,7 +28,11 @@ const httpServer = createServer(app);
 // Initialize Socket.io
 const io = new SocketIO(httpServer, {
   cors: {
-    origin: process.env.PUBLIC_APP_URL || 'http://localhost:5173',
+    origin: [
+      process.env.PUBLIC_APP_URL || 'http://localhost:5173',
+      'https://authentic-spontaneity-production-f486.up.railway.app',
+      /\.railway\.app$/  // Allow all Railway subdomains
+    ],
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -36,7 +40,11 @@ const io = new SocketIO(httpServer, {
 
 // Middleware
 app.use(cors({
-  origin: process.env.PUBLIC_APP_URL || 'http://localhost:5173',
+  origin: [
+    process.env.PUBLIC_APP_URL || 'http://localhost:5173',
+    'https://authentic-spontaneity-production-f486.up.railway.app',
+    /\.railway\.app$/  // Allow all Railway subdomains
+  ],
   credentials: true
 }));
 app.use(express.json());
