@@ -14,6 +14,7 @@
   export let startLocationIconUrl = null; // Custom icon for start location
   export let leaderLocation = null;
   export let autoCenter = false;
+  export let locationTrail = []; // Array of {lat, lng, timestamp} for leader's trail
 
   let mapContainer;
   let map;
@@ -81,7 +82,7 @@
         // Wait 3 seconds after interaction stops to resume auto-centering
         interactionTimeout = setTimeout(() => {
           userInteracting = false;
-        }, 3000);
+        }, 2000); // 2 seconds before re-centering
       };
 
       map.on('dragstart', handleInteractionStart);
@@ -215,15 +216,74 @@
     }
   }
 
-  // Update leader location marker
+  // Update location trail
+  $: if (map && locationTrail && locationTrail.length > 1) {
+    const updateTrail = () => {
+      const trailCoords = locationTrail.map(point => [point.lng, point.lat]);
+
+      if (map.getSource('location-trail')) {
+        map.getSource('location-trail').setData({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: trailCoords
+          }
+        });
+      } else {
+        map.addSource('location-trail', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: trailCoords
+            }
+          }
+        });
+
+        map.addLayer({
+          id: 'location-trail',
+          type: 'line',
+          source: 'location-trail',
+          paint: {
+            'line-color': [
+              'interpolate',
+              ['linear'],
+              ['line-progress'],
+              0, '#10b981',  // Start: green
+              0.5, '#3b82f6', // Middle: blue
+              1, '#8b5cf6'   // End: purple (most recent)
+            ],
+            'line-width': 4,
+            'line-opacity': 0.8
+          },
+          layout: {
+            'line-cap': 'round',
+            'line-join': 'round'
+          }
+        }, 'route'); // Place below route layer
+      }
+    };
+
+    if (map.loaded()) {
+      updateTrail();
+    } else {
+      map.once('load', updateTrail);
+    }
+  }
+
+  // Update leader location marker with festive emoji
   $: if (map && leaderLocation) {
     const el = document.createElement('div');
-    el.innerHTML = '<div class="bg-green-500 rounded-full w-6 h-6 animate-pulse"></div>';
+    el.className = 'leader-marker';
+    el.style.fontSize = '32px';
+    el.style.lineHeight = '1';
+    el.innerHTML = '🎄'; // Christmas tree emoji
 
     if (window.leaderMarker) {
       window.leaderMarker.setLngLat([leaderLocation.lng, leaderLocation.lat]);
     } else {
-      window.leaderMarker = new mapboxgl.Marker(el)
+      window.leaderMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([leaderLocation.lng, leaderLocation.lat])
         .addTo(map);
     }

@@ -11,6 +11,7 @@
   let broadcasting = false;
   let followerCount = 0;
   let currentLocation = null;
+  let locationTrail = []; // Track leader's path over time
   let socket = null;
   let watchId = null;
 
@@ -81,6 +82,13 @@
 
           // Update current location for map centering
           currentLocation = { lat: latitude, lng: longitude };
+
+          // Add to location trail
+          locationTrail = [...locationTrail, {
+            lat: latitude,
+            lng: longitude,
+            timestamp: Date.now()
+          }];
 
           socket.emit('location:update', {
             accessCode,
@@ -273,6 +281,8 @@
           <Map
             waypoints={route.waypoints || []}
             leaderLocation={currentLocation}
+            locationTrail={locationTrail}
+            autoCenter={true}
             showMarkers={false}
           />
         </div>
