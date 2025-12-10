@@ -14,6 +14,7 @@
   let locationTrail = []; // Track leader's path over time
   let socket = null;
   let watchId = null;
+  let wakeLock = null; // Keep screen on during broadcast
 
   onMount(() => {
     // Check for access code in URL or localStorage
@@ -58,10 +59,27 @@
     }
   }
 
-  function startBroadcasting() {
+  async function startBroadcasting() {
     if (!navigator.geolocation) {
       alert('Geolocation is not supported by your browser');
       return;
+    }
+
+    // Request screen wake lock to keep screen on
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log('Screen wake lock activated');
+
+        // Re-request wake lock if visibility changes (screen comes back)
+        document.addEventListener('visibilitychange', async () => {
+          if (document.visibilityState === 'visible' && broadcasting && !wakeLock) {
+            wakeLock = await navigator.wakeLock.request('screen');
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Wake lock not supported or failed:', err);
     }
 
     // Connect to WebSocket
@@ -118,7 +136,7 @@
     });
   }
 
-  function stopBroadcasting() {
+  async function stopBroadcasting() {
     if (!confirm('End this ride? All followers will be disconnected.')) {
       return;
     }
@@ -132,17 +150,28 @@
       socket.disconnect();
     }
 
+    // Release wake lock
+    if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+      console.log('Screen wake lock released');
+    }
+
     broadcasting = false;
     alert('Ride ended successfully!');
     window.location.href = '/manage?code=' + accessCode;
   }
 
-  onDestroy(() => {
+  onDestroy(async () => {
     if (watchId) {
       navigator.geolocation.clearWatch(watchId);
     }
     if (socket) {
       socket.disconnect();
+    }
+    if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
     }
   });
 </script>
