@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { API_URL } from '$lib/config.js';
   import Map from '$lib/components/Map.svelte';
+  import RoutePreview from '$lib/components/RoutePreview.svelte';
 
   let liveRides = [];
   let loading = true;
@@ -21,6 +22,10 @@
 
       if (data.success) {
         liveRides = data.data;
+        // Auto-select first ride if none selected
+        if (liveRides.length > 0 && !selectedRide) {
+          selectedRide = liveRides[0];
+        }
       }
     } catch (error) {
       console.error('Error loading live rides:', error);
@@ -48,8 +53,9 @@
 
     <!-- Header -->
     <div class="mb-8">
+      <a href="/browse" class="text-primary hover:text-secondary font-medium mb-3 inline-block">← Back to Browse</a>
       <div class="flex items-center gap-3 mb-2">
-        <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+        <div class="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
         <h1 class="text-4xl font-bold text-warm-gray-900">Live Rides</h1>
       </div>
       <p class="text-warm-gray-600 text-lg">Track bike trains happening right now</p>
@@ -99,24 +105,41 @@
           {#each liveRides as ride (ride.id)}
             <button
               on:click={() => selectedRide = ride}
-              class="w-full text-left card hover:shadow-md transition-all {selectedRide?.id === ride.id ? 'ring-2 ring-primary' : ''}"
+              class="w-full text-left card hover:shadow-md transition-all p-0 overflow-hidden {selectedRide?.id === ride.id ? 'ring-2 ring-green-500' : ''}"
             >
-              <div class="flex items-start justify-between mb-2">
-                <h3 class="font-bold text-warm-gray-900 pr-2">{ride.route_name}</h3>
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0 mt-1"></div>
-              </div>
+              <!-- Route Preview -->
+              {#if ride.waypoints && ride.waypoints.length > 0}
+                <div class="h-24 w-full overflow-hidden relative">
+                  <RoutePreview waypoints={ride.waypoints} previewImageUrl={ride.preview_image_url} />
+                  <div class="absolute top-2 right-2">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
+                  </div>
+                </div>
+              {/if}
 
-              <div class="text-sm text-warm-gray-600 mb-3">
-                Departed at {formatTime(ride.departure_time)}
-              </div>
+              <div class="p-4">
+                <h3 class="font-bold text-warm-gray-900 mb-2">{ride.route_name}</h3>
 
-              <a
-                href="/ride/{ride.id}"
-                on:click|stopPropagation
-                class="btn btn-primary text-xs w-full"
-              >
-                Track This Ride
-              </a>
+                <div class="flex items-center gap-2 text-xs text-warm-gray-600 mb-3">
+                  <span>{formatTime(ride.departure_time)}</span>
+                  {#if ride.distance_miles}
+                    <span>•</span>
+                    <span>{ride.distance_miles} mi</span>
+                  {/if}
+                  {#if ride.follower_count > 0}
+                    <span>•</span>
+                    <span>{ride.follower_count} tracking</span>
+                  {/if}
+                </div>
+
+                <a
+                  href="/ride/{ride.id}"
+                  on:click|stopPropagation
+                  class="btn btn-primary text-xs w-full"
+                >
+                  Track This Ride
+                </a>
+              </div>
             </button>
           {/each}
         </div>
@@ -129,27 +152,44 @@
         </h2>
 
         {#each liveRides as ride (ride.id)}
-          <div class="card">
-            <div class="flex items-start justify-between mb-2">
-              <h3 class="font-bold text-warm-gray-900 pr-2">{ride.route_name}</h3>
-              <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0 mt-1"></div>
-            </div>
-
-            {#if ride.route_description}
-              <p class="text-sm text-warm-gray-600 mb-3">{ride.route_description}</p>
+          <a href="/ride/{ride.id}" class="card hover:shadow-md transition-all p-0 overflow-hidden block bg-gradient-to-br from-green-50 to-white border-2 border-green-500">
+            <!-- Route Preview -->
+            {#if ride.waypoints && ride.waypoints.length > 0}
+              <div class="h-32 w-full overflow-hidden relative">
+                <RoutePreview waypoints={ride.waypoints} previewImageUrl={ride.preview_image_url} />
+                <div class="absolute top-3 right-3">
+                  <div class="flex items-center gap-2 px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                    <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    LIVE
+                  </div>
+                </div>
+              </div>
             {/if}
 
-            <div class="text-sm text-warm-gray-600 mb-4">
-              Departed at {formatTime(ride.departure_time)}
-            </div>
+            <div class="p-4">
+              <h3 class="font-bold text-warm-gray-900 mb-2">{ride.route_name}</h3>
 
-            <a
-              href="/ride/{ride.id}"
-              class="btn btn-primary w-full"
-            >
-              Track This Ride
-            </a>
-          </div>
+              {#if ride.route_description}
+                <p class="text-sm text-warm-gray-600 mb-3 line-clamp-2">{ride.route_description}</p>
+              {/if}
+
+              <div class="flex items-center gap-2 text-sm text-warm-gray-600 mb-4">
+                <span>{formatTime(ride.departure_time)}</span>
+                {#if ride.distance_miles}
+                  <span>•</span>
+                  <span>{ride.distance_miles} mi</span>
+                {/if}
+                {#if ride.follower_count > 0}
+                  <span>•</span>
+                  <span>{ride.follower_count} tracking</span>
+                {/if}
+              </div>
+
+              <div class="btn btn-primary w-full text-center">
+                Track This Ride
+              </div>
+            </div>
+          </a>
         {/each}
       </div>
     {/if}

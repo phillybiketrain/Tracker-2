@@ -187,6 +187,73 @@
     </div>
   </div>
 
+  <!-- Live Rides Section -->
+  {#if !loading && rides.some(ride => ride.status === 'live')}
+    {@const liveRides = rides.filter(ride => ride.status === 'live')}
+    <div class="mb-12">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+        <h2 class="text-2xl font-bold text-warm-gray-900">Live Now</h2>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {#each liveRides as ride (ride.id)}
+          <a href="/ride/{ride.id}" class="card hover:shadow-md transition-all bg-gradient-to-br from-green-50 to-white border-2 border-green-500 relative block cursor-pointer p-0">
+            <!-- Route Map Preview -->
+            {#if ride.waypoints && ride.waypoints.length > 0}
+              <div class="h-32 w-full overflow-hidden relative">
+                <RoutePreview waypoints={ride.waypoints} previewImageUrl={ride.preview_image_url} />
+              </div>
+            {/if}
+
+            <!-- Card Content -->
+            <div class="p-6 relative">
+              <!-- Live Badge - Top Right -->
+              <div class="absolute top-4 right-4 z-10">
+                <div class="flex items-center gap-2 px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full shadow-md">
+                  <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  Live
+                </div>
+              </div>
+
+              <!-- Route Name -->
+              <div class="mb-3">
+                <h3 class="text-lg font-bold text-warm-gray-900">{ride.route_name}</h3>
+              </div>
+
+              <!-- Departure Info -->
+              <div class="flex items-center gap-3 text-sm text-warm-gray-900 mb-3">
+                <div class="font-medium">{formatTime(ride.departure_time)}</div>
+                {#if ride.distance_miles}
+                  <div class="text-warm-gray-400">•</div>
+                  <div class="text-warm-gray-600">{ride.distance_miles} mi</div>
+                {/if}
+                {#if ride.estimated_duration}
+                  <div class="text-warm-gray-400">•</div>
+                  <div class="text-warm-gray-600">{ride.estimated_duration}</div>
+                {/if}
+              </div>
+
+              <!-- Track Live Button -->
+              <div class="mt-4">
+                <div class="btn btn-primary text-sm w-full text-center">
+                  Track Live
+                </div>
+              </div>
+
+              <!-- Route Icon - Bottom Right -->
+              {#if ride.start_location_icon_url}
+                <div class="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-lg shadow-lg p-1.5 flex items-center justify-center border border-warm-gray-100">
+                  <img src="{ride.start_location_icon_url}" alt="Route icon" class="w-full h-full object-contain" />
+                </div>
+              {/if}
+            </div>
+          </a>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
   <!-- Loading State -->
   {#if loading}
     <div class="text-center py-16">
