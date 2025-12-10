@@ -305,25 +305,21 @@
           <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
           <h1 class="text-[1.125rem] font-bold text-warm-gray-900">Tracking Live</h1>
         </div>
-        <button on:click={stopTracking} class="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
-          Stop
-        </button>
+        {#if leaderLocation}
+          <button
+            on:click={centerOnLeader}
+            class="px-2 py-1 text-xs font-medium text-white bg-primary rounded hover:bg-blue-700 transition-colors"
+          >
+            Center on Leader
+          </button>
+        {:else}
+          <button on:click={stopTracking} class="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
+            Stop
+          </button>
+        {/if}
       </div>
 
-      <!-- Compact Info Bar -->
-      <div class="px-4 py-2 bg-white border-b border-warm-gray-200">
-        <div class="flex items-center justify-between text-sm">
-          <span class="font-medium text-warm-gray-900">{ride.route_name}</span>
-          <div class="flex items-center gap-4 text-warm-gray-600">
-            <span>{followerCount} tracking</span>
-            {#if ride.estimated_duration}
-              <span>~{ride.estimated_duration}</span>
-            {/if}
-          </div>
-        </div>
-      </div>
-
-      <!-- Full Screen Map with Center Button -->
+      <!-- Full Screen Map -->
       <div class="flex-1 relative">
         <Map
           bind:this={mapComponent}
@@ -331,19 +327,6 @@
           {leaderLocation}
           showMarkers={false}
         />
-
-        {#if leaderLocation}
-          <button
-            on:click={centerOnLeader}
-            class="absolute bottom-6 right-4 px-4 py-2 bg-primary hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg transition-colors flex items-center gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Center on Leader
-          </button>
-        {/if}
       </div>
     </div>
   {/if}
