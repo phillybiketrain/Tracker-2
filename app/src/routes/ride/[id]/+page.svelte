@@ -30,12 +30,11 @@
       if (data.success) {
         ride = data.data;
       } else {
-        alert('Ride not found');
+        console.error('Ride not found');
       }
 
     } catch (error) {
       console.error('Error loading ride:', error);
-      alert('Failed to load ride');
     } finally {
       loading = false;
     }
@@ -84,7 +83,7 @@
     });
 
     socket.on('ride:ended', () => {
-      alert('The leader has ended this ride');
+      console.log('The leader has ended this ride');
       stopTracking();
     });
   }
@@ -132,7 +131,7 @@
       });
 
       if (res.ok) {
-        alert('Interest recorded!');
+        console.log('Interest recorded!');
         loadRide();
       }
     } catch (error) {

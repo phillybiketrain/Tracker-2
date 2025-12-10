@@ -84,7 +84,7 @@
 
     } catch (error) {
       console.error('Error loading rides:', error);
-      alert('Failed to load rides');
+      // Removed alert() to prevent SSR crash
     } finally {
       loading = false;
     }
