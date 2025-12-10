@@ -242,62 +242,39 @@
       </div>
 
     {:else}
-      <!-- Broadcasting Screen -->
-      <div class="max-w-6xl mx-auto">
-        <div class="mb-6">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-3">
-              <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <h1 class="text-4xl font-bold text-warm-gray-900">Broadcasting Live</h1>
-            </div>
-            <button on:click={stopBroadcasting} class="btn btn-danger">
-              End Ride
-            </button>
+      <!-- Broadcasting Screen - Mobile Optimized -->
+      <div class="fixed inset-0 flex flex-col bg-warm-gray-50">
+        <!-- Compact Header -->
+        <div class="flex items-center justify-between px-4 py-2 bg-white border-b border-warm-gray-200">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <h1 class="text-[1.125rem] font-bold text-warm-gray-900">Broadcasting Live</h1>
           </div>
-          <p class="text-warm-gray-600 text-lg font-semibold">{route.name}</p>
+          <button on:click={stopBroadcasting} class="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
+            End Ride
+          </button>
         </div>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-            <div class="text-xs text-warm-gray-500 mb-2">Followers</div>
-            <div class="text-4xl font-bold text-warm-gray-900">{followerCount}</div>
-          </div>
-
-          <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-            <div class="text-xs text-warm-gray-500 mb-2">GPS Status</div>
-            <div class="text-xl font-bold mt-1 {currentLocation ? 'text-green-600' : 'text-warm-gray-400'}">
-              {currentLocation ? 'Active' : 'Waiting...'}
-            </div>
-          </div>
-
-          <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-            <div class="text-xs text-warm-gray-500 mb-2">Departure</div>
-            <div class="text-xl font-bold text-warm-gray-900 mt-1">{route.departure_time}</div>
-          </div>
-
-          <div class="card text-center bg-gradient-to-br from-white to-warm-gray-50">
-            <div class="text-xs text-warm-gray-500 mb-2">Duration</div>
-            <div class="text-xl font-bold text-warm-gray-900 mt-1">
-              {route.estimated_duration ? `~${route.estimated_duration}m` : 'N/A'}
+        <!-- Compact Info Bar -->
+        <div class="px-4 py-2 bg-white border-b border-warm-gray-200">
+          <div class="flex items-center justify-between text-sm">
+            <span class="font-medium text-warm-gray-900">{route.name}</span>
+            <div class="flex items-center gap-4 text-warm-gray-600">
+              <span>{followerCount} follower{followerCount !== 1 ? 's' : ''}</span>
+              {#if route.estimated_duration}
+                <span>~{route.estimated_duration}</span>
+              {/if}
             </div>
           </div>
         </div>
 
-        <!-- Map -->
-        <div class="card p-0 overflow-hidden">
-          <div class="h-[600px]">
-            <Map
-              waypoints={route.waypoints || []}
-              leaderLocation={currentLocation}
-            />
-          </div>
-        </div>
-
-        <div class="mt-6 p-4 bg-green-50 border border-green-200 rounded text-center">
-          <p class="text-sm text-green-800">
-            <strong>Keep this page open!</strong> Your location is being broadcast to {followerCount} follower{followerCount !== 1 ? 's' : ''}.
-          </p>
+        <!-- Full Screen Map -->
+        <div class="flex-1 relative">
+          <Map
+            waypoints={route.waypoints || []}
+            leaderLocation={currentLocation}
+            showMarkers={false}
+          />
         </div>
       </div>
     {/if}
