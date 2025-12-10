@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Map from '$lib/components/Map.svelte';
   import { io } from 'socket.io-client';
-  import { API_URL } from '$lib/config.js';
+  import { API_URL, SOCKET_URL } from '$lib/config.js';
 
   let accessCode = '';
   let inputCode = '';
@@ -47,7 +47,7 @@
       }
 
       // Connect to WebSocket
-      socket = io(API_URL);
+      socket = io(SOCKET_URL);
 
       socket.on('connect', () => {
         console.log('Connected to server');

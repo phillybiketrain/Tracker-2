@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Map from '$lib/components/Map.svelte';
   import { io } from 'socket.io-client';
-  import { API_URL } from '$lib/config.js';
+  import { API_URL, SOCKET_URL } from '$lib/config.js';
 
   let step = 'creating'; // creating | broadcasting | success
   let activeStep = 1; // 1 = details, 2 = map, 3 = schedule
@@ -132,7 +132,7 @@
     }
 
     // Connect to WebSocket
-    socket = io(API_URL);
+    socket = io(SOCKET_URL);
 
     socket.on('connect', () => {
       console.log('Connected to server');
