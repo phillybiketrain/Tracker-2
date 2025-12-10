@@ -48,7 +48,6 @@ router.get('/live', async (req, res) => {
       LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
       WHERE ri.status = 'live'
         AND ri.region_id = $1
-        AND r.status = 'approved'
       GROUP BY ri.id, r.id
       ORDER BY ri.started_at DESC
     `, [regionData.id]);

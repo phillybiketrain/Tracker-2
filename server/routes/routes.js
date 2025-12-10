@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
     // Calculate route distance
     const distanceMiles = calculateRouteDistance(data.waypoints);
 
-    // Create route (pending approval by default)
+    // Create route (auto-approved)
     const route = await queryOne(`
       INSERT INTO routes (
         access_code, name, description, waypoints,
@@ -82,7 +82,7 @@ router.post('/', async (req, res) => {
       data.departure_time,
       data.estimated_duration || null,
       data.creator_email || null,
-      'pending', // Requires admin approval
+      'approved', // Auto-approve routes
       data.tag || 'community',
       region.id,
       previewImageUrl,
