@@ -99,15 +99,39 @@ io.on('connection', (socket) => {
 
     console.log(`📍 Location update from ${accessCode}: ${lat}, ${lng}`);
 
+    const timestamp = Date.now();
+
     // Broadcast to all followers in this ride's room
     socket.to(accessCode).emit('location:updated', {
+      accessCode,
       lat,
       lng,
       accuracy,
-      timestamp: Date.now()
+      timestamp
     });
 
-    // TODO: Save location to database (location_trail)
+    // Save location to database (current_location and append to location_trail)
+    try {
+      await query(`
+        UPDATE ride_instances
+        SET
+          current_location = $2::jsonb,
+          location_trail = COALESCE(location_trail, '[]'::jsonb) || $3::jsonb
+        WHERE id IN (
+          SELECT ri.id
+          FROM ride_instances ri
+          JOIN routes r ON ri.route_id = r.id
+          WHERE r.access_code = $1
+            AND ri.status = 'live'
+        )
+      `, [
+        accessCode,
+        JSON.stringify({ lat, lng, timestamp }),
+        JSON.stringify([{ lat, lng, timestamp }])
+      ]);
+    } catch (error) {
+      console.error(`❌ Failed to save location for ${accessCode}:`, error);
+    }
   });
 
   // Leader starts broadcasting
@@ -153,12 +177,15 @@ io.on('connection', (socket) => {
     // Leave room
     socket.leave(accessCode);
 
-    // Mark ride instance as 'completed'
+    // Mark ride instance as 'completed' and clear location data
     // Update any live ride with this access code, regardless of date
     try {
       await query(`
         UPDATE ride_instances
-        SET status = 'completed'
+        SET status = 'completed',
+            ended_at = NOW(),
+            current_location = NULL,
+            location_trail = '[]'::jsonb
         WHERE id IN (
           SELECT ri.id
           FROM ride_instances ri
@@ -216,6 +243,55 @@ io.on('connection', (socket) => {
       followerCount,
       followerId: socket.id
     });
+  });
+
+  // Watch all live rides (for the live page "Watch All" feature)
+  socket.on('watch:all', async () => {
+    console.log(`👀 Client watching all live rides: ${socket.id}`);
+
+    try {
+      // Get all currently live rides
+      const liveRides = await queryAll(`
+        SELECT r.access_code
+        FROM ride_instances ri
+        JOIN routes r ON ri.route_id = r.id
+        WHERE ri.status = 'live'
+      `);
+
+      // Join all live ride rooms
+      liveRides.forEach(ride => {
+        socket.join(ride.access_code);
+      });
+
+      console.log(`✅ Client joined ${liveRides.length} live ride rooms`);
+
+      socket.emit('watch:all:joined', {
+        rides: liveRides.map(r => r.access_code)
+      });
+    } catch (error) {
+      console.error('❌ Failed to join live ride rooms:', error);
+      socket.emit('watch:all:error', { message: 'Failed to watch live rides' });
+    }
+  });
+
+  // Stop watching all rides
+  socket.on('watch:all:stop', async () => {
+    console.log(`🛑 Client stopped watching all: ${socket.id}`);
+
+    try {
+      const liveRides = await queryAll(`
+        SELECT r.access_code
+        FROM ride_instances ri
+        JOIN routes r ON ri.route_id = r.id
+        WHERE ri.status = 'live'
+      `);
+
+      liveRides.forEach(ride => {
+        socket.leave(ride.access_code);
+      });
+    } catch (error) {
+      console.error('❌ Failed to leave live ride rooms:', error);
+    }
   });
 
   // Disconnect handler

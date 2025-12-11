@@ -16,12 +16,28 @@
   export let autoCenter = false;
   export let locationTrail = []; // Array of {lat, lng, timestamp} for leader's trail
 
+  // Multi-ride mode: array of {accessCode, waypoints, leaderLocation, locationTrail, routeName}
+  export let rides = [];
+
+  // Colors for multi-ride mode
+  const RIDE_COLORS = [
+    '#E85D04', // Orange
+    '#3b82f6', // Blue
+    '#10b981', // Green
+    '#8b5cf6', // Purple
+    '#ef4444', // Red
+    '#f59e0b', // Amber
+    '#ec4899', // Pink
+    '#06b6d4', // Cyan
+  ];
+
   let mapContainer;
   let map;
   let markers = [];
   let routeLine = null;
   let userInteracting = false;
   let interactionTimeout = null;
+  let multiRideMarkers = {}; // Store markers by accessCode
 
   onMount(() => {
     if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'pk.YOUR_MAPBOX_TOKEN_HERE') {
@@ -304,6 +320,175 @@
         center: [leaderLocation.lng, leaderLocation.lat],
         zoom: 15,
         essential: true
+      });
+    }
+  }
+
+  // Multi-ride mode rendering
+  $: if (map && rides && rides.length > 0) {
+    const updateMultiRides = () => {
+      // Clear existing multi-ride markers
+      Object.values(multiRideMarkers).forEach(marker => marker.remove());
+      multiRideMarkers = {};
+
+      const bounds = new mapboxgl.LngLatBounds();
+
+      rides.forEach((ride, index) => {
+        const color = RIDE_COLORS[index % RIDE_COLORS.length];
+        const routeId = `route-${ride.accessCode}`;
+        const trailId = `trail-${ride.accessCode}`;
+
+        // Draw planned route (dashed line)
+        if (ride.waypoints && ride.waypoints.length >= 2) {
+          const routeData = {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: ride.waypoints.map(wp => [wp.lng, wp.lat])
+            }
+          };
+
+          if (map.getSource(routeId)) {
+            map.getSource(routeId).setData(routeData);
+          } else {
+            map.addSource(routeId, {
+              type: 'geojson',
+              data: routeData
+            });
+
+            map.addLayer({
+              id: routeId,
+              type: 'line',
+              source: routeId,
+              layout: {
+                'line-cap': 'round',
+                'line-join': 'round'
+              },
+              paint: {
+                'line-color': color,
+                'line-width': 3,
+                'line-opacity': 0.4,
+                'line-dasharray': [2, 2] // Dashed line for planned route
+              }
+            });
+          }
+
+          // Add waypoints to bounds
+          ride.waypoints.forEach(wp => bounds.extend([wp.lng, wp.lat]));
+        }
+
+        // Draw traveled path (solid gradient line)
+        if (ride.locationTrail && ride.locationTrail.length >= 2) {
+          const trailCoords = ride.locationTrail.map(point => [point.lng, point.lat]);
+          const trailData = {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: trailCoords
+            }
+          };
+
+          if (map.getSource(trailId)) {
+            map.getSource(trailId).setData(trailData);
+          } else {
+            map.addSource(trailId, {
+              type: 'geojson',
+              data: trailData,
+              lineMetrics: true // Enable line-progress for gradient
+            });
+
+            map.addLayer({
+              id: trailId,
+              type: 'line',
+              source: trailId,
+              layout: {
+                'line-cap': 'round',
+                'line-join': 'round'
+              },
+              paint: {
+                'line-color': [
+                  'interpolate',
+                  ['linear'],
+                  ['line-progress'],
+                  0, '#10b981',  // Start: green
+                  0.5, '#3b82f6', // Middle: blue
+                  1, '#8b5cf6'   // End: purple (most recent)
+                ],
+                'line-width': 4,
+                'line-opacity': 0.9
+              }
+            });
+          }
+
+          // Add trail points to bounds
+          ride.locationTrail.forEach(point => bounds.extend([point.lng, point.lat]));
+        }
+
+        // Draw leader marker
+        if (ride.leaderLocation) {
+          const el = document.createElement('div');
+          el.className = 'leader-marker-multi';
+          el.style.cssText = `
+            font-size: 28px;
+            line-height: 1;
+            position: relative;
+            cursor: pointer;
+          `;
+          el.innerHTML = '🎄';
+          el.title = ride.routeName || ride.accessCode;
+
+          const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([ride.leaderLocation.lng, ride.leaderLocation.lat])
+            .addTo(map);
+
+          multiRideMarkers[ride.accessCode] = marker;
+          bounds.extend([ride.leaderLocation.lng, ride.leaderLocation.lat]);
+        }
+      });
+
+      // Fit map to show all rides
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, {
+          padding: { top: 60, bottom: 60, left: 60, right: 60 },
+          maxZoom: 14,
+          duration: 1000
+        });
+      }
+    };
+
+    if (map.loaded()) {
+      updateMultiRides();
+    } else {
+      map.once('load', updateMultiRides);
+    }
+  }
+
+  // Update a single ride's leader location (for real-time updates)
+  export function updateRideLeader(accessCode, location) {
+    if (multiRideMarkers[accessCode]) {
+      multiRideMarkers[accessCode].setLngLat([location.lng, location.lat]);
+    }
+  }
+
+  // Fit bounds to show all rides
+  export function fitAllRides() {
+    if (!map || rides.length === 0) return;
+
+    const bounds = new mapboxgl.LngLatBounds();
+    rides.forEach(ride => {
+      if (ride.waypoints) {
+        ride.waypoints.forEach(wp => bounds.extend([wp.lng, wp.lat]));
+      }
+      if (ride.leaderLocation) {
+        bounds.extend([ride.leaderLocation.lng, ride.leaderLocation.lat]);
+      }
+    });
+
+    if (!bounds.isEmpty()) {
+      map.fitBounds(bounds, {
+        padding: { top: 60, bottom: 60, left: 60, right: 60 },
+        maxZoom: 14,
+        duration: 1000
       });
     }
   }
