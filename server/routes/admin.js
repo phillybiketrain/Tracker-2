@@ -1005,14 +1005,17 @@ router.post('/rides', requireAdmin, async (req, res) => {
 
     for (const date of dates) {
       // Check if a scheduled or live instance already exists for this date
-      // (allow creating new instance if previous one was completed)
       const existing = await queryOne(`
-        SELECT id FROM ride_instances
-        WHERE route_id = $1 AND date = $2 AND status IN ('scheduled', 'live')
+        SELECT id, status FROM ride_instances
+        WHERE route_id = $1 AND date = $2
       `, [route.id, date]);
 
       if (existing) {
-        continue; // Skip if already scheduled or live
+        if (existing.status === 'scheduled' || existing.status === 'live') {
+          continue; // Skip if already scheduled or live
+        }
+        // Delete completed instance to allow re-scheduling
+        await query(`DELETE FROM ride_instances WHERE id = $1`, [existing.id]);
       }
 
       // Create instance
