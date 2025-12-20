@@ -259,6 +259,7 @@
               waypoints={selectedRide?.waypoints || []}
               leaderLocation={selectedRide?.current_location || null}
               locationTrail={selectedRide?.location_trail || []}
+              showMarkers={false}
             />
           </div>
           <p class="text-sm text-warm-gray-500 mt-3">
