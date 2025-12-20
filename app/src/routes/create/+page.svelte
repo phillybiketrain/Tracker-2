@@ -328,11 +328,11 @@
                 <textarea
                   bind:value={description}
                   rows="3"
-                  maxlength="1000"
+                  maxlength="2500"
                   placeholder="Describe your route, who it's for, or any special notes..."
                   class="w-full px-4 py-3 border border-warm-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 ></textarea>
-                <div class="text-xs text-warm-gray-500 mt-1 text-right">{description.length}/1000</div>
+                <div class="text-xs text-warm-gray-500 mt-1 text-right">{description.length}/2500</div>
               </div>
 
               <div class="grid grid-cols-3 gap-4">

@@ -15,7 +15,7 @@ const router = express.Router();
 // Validation schemas
 const CreateRouteSchema = z.object({
   name: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
+  description: z.string().max(2500).optional(),
   waypoints: z.array(z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
