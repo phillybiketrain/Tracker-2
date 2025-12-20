@@ -11,6 +11,7 @@
   export let showRoute = true;
   export let showMarkers = true; // Control whether to show waypoint markers
   export let showStartIconOnly = false; // Show only start location icon (not numbered waypoints)
+  export let showAllMarkers = true; // When false with many waypoints, only show start/end markers
   export let startLocationIconUrl = null; // Custom icon for start location
   export let leaderLocation = null;
   export let autoCenter = false;
@@ -123,6 +124,10 @@
       waypoints.forEach((wp, index) => {
         // If showStartIconOnly, only show the first waypoint with custom icon
         if (showStartIconOnly && index !== 0) return;
+
+        // For large routes (GPX imports), only show start and end markers
+        const isFirstOrLast = index === 0 || index === waypoints.length - 1;
+        if (!showAllMarkers && !isFirstOrLast) return;
 
         const el = document.createElement('div');
         el.className = 'waypoint-marker';

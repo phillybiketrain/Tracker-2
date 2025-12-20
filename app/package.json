@@ -24,6 +24,7 @@
     "vite": "^5.0.3"
   },
   "dependencies": {
+    "gpxparser": "^3.0.8",
     "mapbox-gl": "^3.0.1",
     "socket.io-client": "^4.7.2"
   }

@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import Map from '$lib/components/Map.svelte';
+  import GpxUpload from '$lib/components/GpxUpload.svelte';
   import { API_URL } from '$lib/config.js';
 
   let activeStep = 1; // 1 = details, 2 = map, 3 = schedule
@@ -16,6 +17,8 @@
   let success = false;
   let creating = false;
   let currentMonthOffset = 0; // 0 = current month, 1 = next month, etc.
+  let routeInputMode = 'draw'; // 'draw' or 'gpx'
+  let gpxFileName = null;
 
   function handleMapClick(coords) {
     waypoints = [...waypoints, coords];
@@ -27,6 +30,13 @@
 
   function clearRoute() {
     waypoints = [];
+    gpxFileName = null;
+  }
+
+  function handleGpxImport(event) {
+    waypoints = event.detail.waypoints;
+    gpxFileName = event.detail.fileName;
+    routeInputMode = 'draw'; // Switch to map view to show/edit the imported route
   }
 
   function removeWaypoint(index) {
@@ -373,7 +383,7 @@
               <div class="w-8 h-8 rounded-full {activeStep >= 2 ? 'bg-primary text-white' : 'bg-warm-gray-300 text-warm-gray-600'} flex items-center justify-center font-bold text-sm">
                 2
               </div>
-              <h2 class="text-xl font-bold text-warm-gray-900">Draw Your Route</h2>
+              <h2 class="text-xl font-bold text-warm-gray-900">Route Path</h2>
             </div>
             <svg class="w-5 h-5 transition-transform {activeStep === 2 ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -382,40 +392,81 @@
 
           {#if activeStep === 2}
             <div class="mt-6">
-              <div class="h-96 rounded-lg overflow-hidden mb-4">
-                <Map {waypoints} onMapClick={handleMapClick} />
+              <!-- Mode Toggle -->
+              <div class="flex gap-2 mb-4">
+                <button
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors {routeInputMode === 'draw'
+                    ? 'bg-primary text-white'
+                    : 'bg-warm-gray-100 text-warm-gray-700 hover:bg-warm-gray-200'}"
+                  on:click={() => routeInputMode = 'draw'}
+                >
+                  Draw on Map
+                </button>
+                <button
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors {routeInputMode === 'gpx'
+                    ? 'bg-primary text-white'
+                    : 'bg-warm-gray-100 text-warm-gray-700 hover:bg-warm-gray-200'}"
+                  on:click={() => routeInputMode = 'gpx'}
+                >
+                  Import GPX
+                </button>
               </div>
 
-              <div class="flex gap-3 mb-4">
-                <button on:click={useCurrentLocation} class="btn btn-secondary flex-1">
-                  Use My Location
-                </button>
-                <button on:click={clearRoute} class="btn btn-secondary flex-1">
-                  Clear Route
-                </button>
-              </div>
+              {#if routeInputMode === 'gpx' && waypoints.length === 0}
+                <GpxUpload on:import={handleGpxImport} />
+              {:else}
+                <!-- GPX Import Success Banner -->
+                {#if gpxFileName}
+                  <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 flex justify-between items-center">
+                    <span class="text-green-800 text-sm">
+                      Imported from <strong>{gpxFileName}</strong> ({waypoints.length} points)
+                    </span>
+                    <button on:click={clearRoute} class="text-green-600 hover:text-green-800 text-sm font-medium">
+                      Clear
+                    </button>
+                  </div>
+                {/if}
 
-              {#if waypoints.length > 0}
-                <div class="mb-4">
-                  <div class="text-sm font-medium text-warm-gray-900 mb-2">
-                    Waypoints ({waypoints.length})
-                  </div>
-                  <div class="space-y-2 max-h-40 overflow-y-auto">
-                    {#each waypoints as wp, i}
-                      <div class="flex items-center justify-between p-2 bg-warm-gray-50 rounded">
-                        <span class="text-sm text-warm-gray-700">
-                          {i + 1}. {wp.lat.toFixed(4)}, {wp.lng.toFixed(4)}
-                        </span>
-                        <button
-                          on:click={() => removeWaypoint(i)}
-                          class="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    {/each}
-                  </div>
+                <div class="h-96 rounded-lg overflow-hidden mb-4">
+                  <Map {waypoints} onMapClick={handleMapClick} showAllMarkers={waypoints.length <= 50} />
                 </div>
+
+                <div class="flex gap-3 mb-4">
+                  <button on:click={useCurrentLocation} class="btn btn-secondary flex-1">
+                    Use My Location
+                  </button>
+                  <button on:click={clearRoute} class="btn btn-secondary flex-1">
+                    Clear Route
+                  </button>
+                </div>
+
+                {#if waypoints.length > 0}
+                  <div class="mb-4">
+                    <div class="text-sm font-medium text-warm-gray-900 mb-2">
+                      Waypoints ({waypoints.length})
+                    </div>
+                    <div class="space-y-2 max-h-40 overflow-y-auto">
+                      {#if waypoints.length > 20}
+                        <p class="text-xs text-warm-gray-500 mb-2">
+                          Showing first 20 of {waypoints.length} waypoints
+                        </p>
+                      {/if}
+                      {#each waypoints.slice(0, 20) as wp, i}
+                        <div class="flex items-center justify-between p-2 bg-warm-gray-50 rounded">
+                          <span class="text-sm text-warm-gray-700">
+                            {i + 1}. {wp.lat.toFixed(4)}, {wp.lng.toFixed(4)}
+                          </span>
+                          <button
+                            on:click={() => removeWaypoint(i)}
+                            class="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
               {/if}
 
               <button on:click={nextStep} class="btn btn-primary w-full" disabled={waypoints.length < 2}>
