@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { API_URL } from '$lib/config.js';
+  import Markdown from '$lib/components/Markdown.svelte';
 
   let token = '';
   let region = 'philly';
@@ -917,7 +918,7 @@
                     </div>
 
                     {#if route.description}
-                      <p class="text-sm text-warm-gray-600 mb-2">{route.description}</p>
+                      <Markdown content={route.description} className="text-sm text-warm-gray-600 mb-2" />
                     {/if}
 
                     <div class="flex gap-6 text-xs text-warm-gray-600">

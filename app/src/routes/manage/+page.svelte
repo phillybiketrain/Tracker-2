@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { API_URL } from '$lib/config.js';
+  import Markdown from '$lib/components/Markdown.svelte';
 
   let accessCode = '';
   let route = null;
@@ -389,7 +390,7 @@
                 {route.name}
               </h1>
               {#if route.description}
-                <p class="text-warm-gray-600">{route.description}</p>
+                <Markdown content={route.description} className="text-warm-gray-600" />
               {/if}
               <div class="flex gap-4 mt-2 text-sm text-warm-gray-600">
                 <span>Departs: {route.departure_time}</span>

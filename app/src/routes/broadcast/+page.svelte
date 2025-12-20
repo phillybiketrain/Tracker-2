@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/stores';
   import Map from '$lib/components/Map.svelte';
+  import Markdown from '$lib/components/Markdown.svelte';
   import { io } from 'socket.io-client';
   import { API_URL, SOCKET_URL } from '$lib/config.js';
 
@@ -234,7 +235,7 @@
         <div class="card mb-6">
           <h1 class="text-3xl font-bold text-warm-gray-900 mb-2">{route.name}</h1>
           {#if route.description}
-            <p class="text-warm-gray-600 mb-4">{route.description}</p>
+            <Markdown content={route.description} className="text-warm-gray-600 mb-4" />
           {/if}
 
           <div class="flex gap-6 text-sm text-warm-gray-600 mb-6">

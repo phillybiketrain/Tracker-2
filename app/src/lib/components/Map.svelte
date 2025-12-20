@@ -32,6 +32,32 @@
     '#06b6d4', // Cyan
   ];
 
+  // Maximum points for route line rendering (prevents browser crashes with large GPX files)
+  const MAX_ROUTE_POINTS = 500;
+
+  /**
+   * Sample waypoints to reduce rendering load while maintaining route shape
+   * @param {Array} points - Full waypoints array
+   * @param {number} maxPoints - Maximum number of points to keep
+   * @returns {Array} Sampled waypoints including first and last
+   */
+  function sampleWaypoints(points, maxPoints = MAX_ROUTE_POINTS) {
+    if (!points || points.length <= maxPoints) {
+      return points;
+    }
+
+    const sampled = [];
+    const step = (points.length - 1) / (maxPoints - 1);
+
+    for (let i = 0; i < maxPoints - 1; i++) {
+      sampled.push(points[Math.round(i * step)]);
+    }
+    // Always include the last point
+    sampled.push(points[points.length - 1]);
+
+    return sampled;
+  }
+
   let mapContainer;
   let map;
   let markers = [];
@@ -165,12 +191,13 @@
     // Draw route line
     if (showRoute && waypoints.length >= 2) {
       const updateRoute = () => {
-        // Use waypoints directly - no smoothing to avoid curve overshoot
+        // Sample waypoints for large routes to prevent browser crashes
+        const displayWaypoints = sampleWaypoints(waypoints);
         const routeData = {
           type: 'Feature',
           geometry: {
             type: 'LineString',
-            coordinates: waypoints.map(wp => [wp.lng, wp.lat])
+            coordinates: displayWaypoints.map(wp => [wp.lng, wp.lat])
           }
         };
 
@@ -240,7 +267,9 @@
   // Update location trail
   $: if (map && locationTrail && locationTrail.length > 1) {
     const updateTrail = () => {
-      const trailCoords = locationTrail.map(point => [point.lng, point.lat]);
+      // Sample trail if very long (for performance)
+      const displayTrail = sampleWaypoints(locationTrail, MAX_ROUTE_POINTS);
+      const trailCoords = displayTrail.map(point => [point.lng, point.lat]);
 
       if (map.getSource('location-trail')) {
         map.getSource('location-trail').setData({
@@ -345,11 +374,13 @@
 
         // Draw planned route (dashed line)
         if (ride.waypoints && ride.waypoints.length >= 2) {
+          // Sample waypoints for large routes
+          const displayWaypoints = sampleWaypoints(ride.waypoints);
           const routeData = {
             type: 'Feature',
             geometry: {
               type: 'LineString',
-              coordinates: ride.waypoints.map(wp => [wp.lng, wp.lat])
+              coordinates: displayWaypoints.map(wp => [wp.lng, wp.lat])
             }
           };
 
@@ -384,7 +415,9 @@
 
         // Draw traveled path (solid gradient line)
         if (ride.locationTrail && ride.locationTrail.length >= 2) {
-          const trailCoords = ride.locationTrail.map(point => [point.lng, point.lat]);
+          // Sample trail for large routes
+          const displayTrail = sampleWaypoints(ride.locationTrail, MAX_ROUTE_POINTS);
+          const trailCoords = displayTrail.map(point => [point.lng, point.lat]);
           const trailData = {
             type: 'Feature',
             geometry: {

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { API_URL } from '$lib/config.js';
+  import Markdown from '$lib/components/Markdown.svelte';
 
   let token = '';
   let role = '';
@@ -220,7 +221,7 @@
                   <div class="flex-1">
                     <h3 class="font-semibold text-warm-gray-900">{route.name}</h3>
                     {#if route.description}
-                      <p class="text-sm text-warm-gray-600 mt-1">{route.description}</p>
+                      <Markdown content={route.description} className="text-sm text-warm-gray-600 mt-1" />
                     {/if}
                     <div class="flex items-center gap-4 mt-2 text-xs text-warm-gray-600">
                       <span>Departs: {route.departure_time}</span>
