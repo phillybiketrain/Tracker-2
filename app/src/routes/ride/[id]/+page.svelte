@@ -2,6 +2,7 @@
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
   import Map from '$lib/components/Map.svelte';
+  import Markdown from '$lib/components/Markdown.svelte';
   import { io } from 'socket.io-client';
   import { API_URL, SOCKET_URL } from '$lib/config.js';
 
@@ -206,7 +207,7 @@
           {#if ride.route_description}
             <div class="card">
               <h3 class="font-bold mb-2 text-warm-gray-900">About this ride</h3>
-              <p class="text-warm-gray-600">{ride.route_description}</p>
+              <Markdown content={ride.route_description} className="text-warm-gray-600" />
             </div>
           {/if}
 
