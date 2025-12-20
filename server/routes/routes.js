@@ -173,14 +173,15 @@ router.post('/:accessCode/schedule', async (req, res) => {
     const instances = [];
 
     for (const date of dates) {
-      // Check if instance already exists
+      // Check if a scheduled or live instance already exists for this date
+      // (allow creating new instance if previous one was completed)
       const existing = await queryOne(`
         SELECT id FROM ride_instances
-        WHERE route_id = $1 AND date = $2
+        WHERE route_id = $1 AND date = $2 AND status IN ('scheduled', 'live')
       `, [route.id, date]);
 
       if (existing) {
-        continue; // Skip if already scheduled
+        continue; // Skip if already scheduled or live
       }
 
       // Create instance
