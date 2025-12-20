@@ -98,13 +98,14 @@ router.post('/', async (req, res) => {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('❌ Validation error creating route:', JSON.stringify(error.errors, null, 2));
       return res.status(400).json({
         error: 'Validation error',
         details: error.errors
       });
     }
 
-    console.error('Error creating route:', error);
+    console.error('❌ Error creating route:', error);
     res.status(500).json({
       error: 'Failed to create route',
       message: error.message

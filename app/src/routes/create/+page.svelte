@@ -85,24 +85,31 @@
     creating = true;
 
     try {
+      // Build request body, omitting empty optional fields
+      const routePayload = {
+        name: routeName,
+        description: description || undefined,
+        waypoints,
+        departure_time: departureTime,
+        estimated_duration: estimatedDuration ? `${estimatedDuration} min` : undefined,
+        tag: routeTag
+      };
+
       // Create route
       const routeRes = await fetch(`${API_URL}/routes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: routeName,
-          description,
-          waypoints,
-          departure_time: departureTime,
-          estimated_duration: estimatedDuration ? `${estimatedDuration} min` : '',
-          tag: routeTag
-        })
+        body: JSON.stringify(routePayload)
       });
 
       const routeData = await routeRes.json();
 
       if (!routeData.success) {
-        throw new Error(routeData.error || 'Failed to create route');
+        // Include validation details if available
+        const errorDetails = routeData.details
+          ? routeData.details.map(d => `${d.path.join('.')}: ${d.message}`).join(', ')
+          : '';
+        throw new Error(routeData.error + (errorDetails ? `: ${errorDetails}` : ''));
       }
 
       accessCode = routeData.data.access_code;
