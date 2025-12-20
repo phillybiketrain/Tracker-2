@@ -250,7 +250,7 @@
           </div>
 
           <div class="h-64 rounded-lg overflow-hidden mb-6">
-            <Map waypoints={route.waypoints || []} />
+            <Map waypoints={route.waypoints || []} showMarkers={false} />
           </div>
 
           <div class="p-4 bg-yellow-50 border border-yellow-200 rounded mb-6">
@@ -263,19 +263,21 @@
             </ul>
           </div>
 
-          <button
-            on:click={startBroadcasting}
-            class="btn btn-primary w-full py-4 text-lg"
-          >
-            Start Broadcasting
-          </button>
+          <div class="flex gap-3">
+            <button
+              on:click={startBroadcasting}
+              class="btn btn-primary py-4 text-lg flex-[3]"
+            >
+              Start Broadcasting
+            </button>
 
-          <a
-            href="/manage?code={accessCode}"
-            class="btn btn-secondary w-full mt-3"
-          >
-            Back to Manage
-          </a>
+            <a
+              href="/manage?code={accessCode}"
+              class="btn btn-secondary py-4 flex-1 flex items-center justify-center"
+            >
+              Back
+            </a>
+          </div>
         </div>
       </div>
 
