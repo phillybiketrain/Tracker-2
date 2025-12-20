@@ -9,8 +9,10 @@
   let region = 'philly';
   let stats = null;
   let pendingRoutes = [];
+  let liveRides = [];
   let loading = true;
   let confirmingAction = null; // { routeId, action: 'approve' | 'reject' }
+  let endingRide = null; // ride id being ended
 
   onMount(() => {
     // Check if logged in
@@ -30,14 +32,15 @@
     loading = true;
 
     try {
-      // Load stats and pending routes in parallel
-      const [statsRes, pendingRes] = await Promise.all([
+      // Load stats, pending routes, and live rides in parallel
+      const [statsRes, pendingRes, liveRes] = await Promise.all([
         fetch(`${API_URL}/admin/stats?region=${region}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
         fetch(`${API_URL}/admin/routes/pending?region=${region}`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        })
+        }),
+        fetch(`${API_URL}/rides/live?region=${region}`)
       ]);
 
       if (!statsRes.ok || !pendingRes.ok) {
@@ -52,9 +55,11 @@
 
       const statsData = await statsRes.json();
       const pendingData = await pendingRes.json();
+      const liveData = liveRes.ok ? await liveRes.json() : { data: [] };
 
       stats = statsData.data;
       pendingRoutes = pendingData.data;
+      liveRides = liveData.data || [];
 
     } catch (err) {
       console.error('Error loading data:', err);
@@ -114,6 +119,47 @@
     localStorage.removeItem('admin_role');
     localStorage.removeItem('admin_region');
     goto('/admin');
+  }
+
+  async function endRide(rideId) {
+    endingRide = rideId;
+    try {
+      const res = await fetch(`${API_URL}/admin/rides/${rideId}/end`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to end ride');
+      }
+
+      await loadData();
+    } catch (err) {
+      alert('Failed to end ride: ' + err.message);
+      console.error(err);
+    } finally {
+      endingRide = null;
+    }
+  }
+
+  async function cleanupStaleRides() {
+    try {
+      const res = await fetch(`${API_URL}/admin/rides/cleanup-stale`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Failed to cleanup');
+
+      alert(data.message);
+      await loadData();
+    } catch (err) {
+      alert('Failed to cleanup stale rides: ' + err.message);
+      console.error(err);
+    }
   }
 
   function formatDate(dateString) {
@@ -285,6 +331,53 @@
           </div>
         {/if}
       </div>
+
+      <!-- Live Rides Management -->
+      {#if liveRides.length > 0}
+        <div class="bg-white rounded-lg border border-warm-gray-200 mt-6">
+          <div class="px-6 py-4 border-b border-warm-gray-200 flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-warm-gray-900 flex items-center gap-2">
+                <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                Live Rides
+              </h2>
+              <p class="text-sm text-warm-gray-600 mt-1">{liveRides.length} ride(s) currently active</p>
+            </div>
+            <button
+              on:click={cleanupStaleRides}
+              class="px-3 py-1.5 text-xs bg-warm-gray-100 text-warm-gray-700 rounded hover:bg-warm-gray-200"
+            >
+              Cleanup Stale
+            </button>
+          </div>
+
+          <div class="divide-y divide-warm-gray-100">
+            {#each liveRides as ride (ride.id)}
+              <div class="px-6 py-4 hover:bg-warm-gray-50">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <h3 class="font-semibold text-warm-gray-900">{ride.route_name}</h3>
+                    <div class="flex items-center gap-4 mt-1 text-xs text-warm-gray-600">
+                      <span>Code: <span class="font-mono">{ride.access_code}</span></span>
+                      <span>Started: {formatDate(ride.started_at)}</span>
+                      {#if ride.follower_count > 0}
+                        <span>{ride.follower_count} follower(s)</span>
+                      {/if}
+                    </div>
+                  </div>
+                  <button
+                    on:click={() => endRide(ride.id)}
+                    disabled={endingRide === ride.id}
+                    class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {endingRide === ride.id ? 'Ending...' : 'End Ride'}
+                  </button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
     {/if}
   </div>
 </div>

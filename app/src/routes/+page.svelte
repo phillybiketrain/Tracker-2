@@ -1,6 +1,7 @@
 <script>
   import { API_URL } from '$lib/config.js';
   import RoutePreview from '$lib/components/RoutePreview.svelte';
+  import Markdown from '$lib/components/Markdown.svelte';
   import { onMount } from 'svelte';
 
   let rides = [];
@@ -223,7 +224,9 @@
                 <h3 class="text-2xl font-bold text-gray-900">{route.name}</h3>
               </div>
               {#if route.description}
-                <p class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-2">{route.description}</p>
+                <div class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-2">
+                  <Markdown content={route.description} />
+                </div>
               {/if}
 
               <div class="space-y-2 mb-6">

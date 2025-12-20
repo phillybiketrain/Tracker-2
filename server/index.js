@@ -172,7 +172,7 @@ io.on('connection', (socket) => {
   socket.on('ride:end', async (data) => {
     const { accessCode } = data;
 
-    console.log(`🏁 Ride ended: ${accessCode}`);
+    console.log(`🏁 Ride end requested: ${accessCode}`);
 
     // Leave room
     socket.leave(accessCode);
@@ -180,7 +180,7 @@ io.on('connection', (socket) => {
     // Mark ride instance as 'completed' and clear location data
     // Update any live ride with this access code, regardless of date
     try {
-      await query(`
+      const result = await query(`
         UPDATE ride_instances
         SET status = 'completed',
             ended_at = NOW(),
@@ -195,7 +195,12 @@ io.on('connection', (socket) => {
         )
       `, [accessCode]);
 
-      console.log(`✅ Ride ${accessCode} marked as completed in database`);
+      const rowsUpdated = result.rowCount || 0;
+      if (rowsUpdated > 0) {
+        console.log(`✅ Ride ${accessCode} marked as completed (${rowsUpdated} instance(s) updated)`);
+      } else {
+        console.log(`⚠️ No live ride found for ${accessCode} to mark as completed`);
+      }
     } catch (error) {
       console.error(`❌ Failed to mark ride ${accessCode} as completed:`, error);
     }

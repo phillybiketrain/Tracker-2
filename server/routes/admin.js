@@ -1088,6 +1088,109 @@ router.delete('/rides/:id', requireAdmin, async (req, res) => {
 });
 
 /**
+ * POST /api/admin/rides/:id/end
+ * Manually end a live ride
+ */
+router.post('/rides/:id/end', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get ride instance
+    const ride = await queryOne(`
+      SELECT ri.*, r.region_id, r.access_code, r.name
+      FROM ride_instances ri
+      JOIN routes r ON ri.route_id = r.id
+      WHERE ri.id = $1
+    `, [id]);
+
+    if (!ride) {
+      return res.status(404).json({
+        error: 'Ride instance not found'
+      });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== ride.region_id) {
+      return res.status(403).json({
+        error: 'Access denied to this region'
+      });
+    }
+
+    if (ride.status !== 'live') {
+      return res.status(400).json({
+        error: `Ride is not live (current status: ${ride.status})`
+      });
+    }
+
+    // End the ride
+    await query(`
+      UPDATE ride_instances
+      SET status = 'completed',
+          ended_at = NOW(),
+          current_location = NULL,
+          location_trail = '[]'::jsonb
+      WHERE id = $1
+    `, [id]);
+
+    console.log(`🏁 Admin manually ended ride: ${ride.name} (${ride.access_code})`);
+
+    res.json({
+      success: true,
+      message: `Ride "${ride.name}" ended successfully`
+    });
+
+  } catch (error) {
+    console.error('Error ending ride:', error);
+    res.status(500).json({
+      error: 'Failed to end ride',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/admin/rides/cleanup-stale
+ * Mark stale live rides as completed (no GPS update in 60+ minutes)
+ */
+router.post('/rides/cleanup-stale', requireAdmin, async (req, res) => {
+  try {
+    // Find and end rides that:
+    // 1. Are marked 'live'
+    // 2. Haven't had a location update in 60+ minutes (or never had one)
+    const result = await query(`
+      UPDATE ride_instances
+      SET status = 'completed',
+          ended_at = NOW(),
+          current_location = NULL,
+          location_trail = '[]'::jsonb
+      WHERE status = 'live'
+        AND (
+          started_at < NOW() - INTERVAL '60 minutes'
+          OR started_at IS NULL
+        )
+      RETURNING id
+    `);
+
+    const count = result.rowCount || 0;
+
+    console.log(`🧹 Cleaned up ${count} stale live ride(s)`);
+
+    res.json({
+      success: true,
+      message: `Cleaned up ${count} stale ride(s)`,
+      count
+    });
+
+  } catch (error) {
+    console.error('Error cleaning up stale rides:', error);
+    res.status(500).json({
+      error: 'Failed to cleanup stale rides',
+      message: error.message
+    });
+  }
+});
+
+/**
  * POST /api/admin/routes/:routeId/upload-icon
  * Upload or update start location icon for a route (admin only)
  */

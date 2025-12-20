@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { API_URL } from '$lib/config.js';
+  import Markdown from '$lib/components/Markdown.svelte';
 
   let email = '';
   let allRoutes = false;
@@ -200,7 +201,9 @@
                       <div class="flex-1 min-w-0">
                         <div class="font-semibold text-warm-gray-900 text-sm">{route.name}</div>
                         {#if route.description}
-                          <div class="text-xs text-warm-gray-600 mt-1 line-clamp-2">{route.description}</div>
+                          <div class="text-xs text-warm-gray-600 mt-1 line-clamp-2">
+                            <Markdown content={route.description} />
+                          </div>
                         {/if}
                         <div class="text-xs text-warm-gray-500 mt-1">
                           Departs {route.departure_time} • {route.tag}
