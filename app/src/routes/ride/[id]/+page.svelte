@@ -305,17 +305,42 @@
           <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
           <h1 class="text-[1.125rem] font-bold text-warm-gray-900">Tracking Live</h1>
         </div>
-        {#if leaderLocation}
-          <button
-            on:click={centerOnLeader}
-            class="px-2 py-1 text-xs font-medium text-white bg-primary rounded hover:bg-blue-700 transition-colors"
-          >
-            Center on Leader
-          </button>
-        {:else}
+        <div class="flex items-center gap-2">
+          {#if leaderLocation}
+            <button
+              on:click={centerOnLeader}
+              class="px-2 py-1 text-xs font-medium text-white bg-primary rounded hover:bg-blue-700 transition-colors"
+            >
+              Center
+            </button>
+          {/if}
           <button on:click={stopTracking} class="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
             Stop
           </button>
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="px-4 py-2 bg-white border-b border-warm-gray-200 flex items-center justify-between text-sm">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-1.5">
+            {#if lastUpdate && (Date.now() - lastUpdate.getTime()) < 30000}
+              <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span class="text-green-700 font-medium">Connected</span>
+            {:else if lastUpdate}
+              <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+              <span class="text-yellow-700 font-medium">Waiting...</span>
+            {:else}
+              <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <span class="text-warm-gray-500">Connecting...</span>
+            {/if}
+          </div>
+          <span class="text-warm-gray-500">
+            {getTimeSinceUpdate()}
+          </span>
+        </div>
+        {#if followerCount > 0}
+          <span class="text-warm-gray-500">{followerCount} tracking</span>
         {/if}
       </div>
 
