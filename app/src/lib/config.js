@@ -1,6 +1,8 @@
 // API configuration
 // Check if we're in production by looking at the hostname
-const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('railway.app');
+const isProduction = typeof window !== 'undefined' &&
+  (window.location.hostname.includes('railway.app') ||
+   window.location.hostname.includes('phillybiketrain.org'));
 
 // In production, construct the API URL from the PUBLIC_API_URL env variable
 // This should be set to the server's Railway URL + /api
