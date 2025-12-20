@@ -322,18 +322,16 @@
     }
   }
 
-  // Update leader location marker with festive emoji
+  // Update leader location marker with custom image
   $: if (map && leaderLocation) {
     const el = document.createElement('div');
     el.className = 'leader-marker';
-    el.style.fontSize = '32px';
-    el.style.lineHeight = '1';
-    el.innerHTML = '🎄'; // Christmas tree emoji
+    el.innerHTML = '<img src="/leader-marker.png" alt="Leader" style="width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">';
 
     if (window.leaderMarker) {
       window.leaderMarker.setLngLat([leaderLocation.lng, leaderLocation.lat]);
     } else {
-      window.leaderMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+      window.leaderMarker = new mapboxgl.Marker({ element: el, anchor: 'center' })
         .setLngLat([leaderLocation.lng, leaderLocation.lat])
         .addTo(map);
     }
@@ -467,15 +465,13 @@
           const el = document.createElement('div');
           el.className = 'leader-marker-multi';
           el.style.cssText = `
-            font-size: 28px;
-            line-height: 1;
             position: relative;
             cursor: pointer;
           `;
-          el.innerHTML = '🎄';
+          el.innerHTML = '<img src="/leader-marker.png" alt="Leader" style="width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">';
           el.title = ride.routeName || ride.accessCode;
 
-          const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
             .setLngLat([ride.leaderLocation.lng, ride.leaderLocation.lat])
             .addTo(map);
 
