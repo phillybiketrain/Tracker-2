@@ -28,14 +28,18 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
+// Allowed origins for CORS
+const allowedOrigins = [
+  process.env.PUBLIC_APP_URL || 'http://localhost:5173',
+  'https://authentic-spontaneity-production-f486.up.railway.app',
+  /\.railway\.app$/,  // Allow all Railway subdomains
+  /phillybiketrain\.org$/  // Allow custom domain (with or without www)
+];
+
 // Initialize Socket.io
 const io = new SocketIO(httpServer, {
   cors: {
-    origin: [
-      process.env.PUBLIC_APP_URL || 'http://localhost:5173',
-      'https://authentic-spontaneity-production-f486.up.railway.app',
-      /\.railway\.app$/  // Allow all Railway subdomains
-    ],
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -43,11 +47,7 @@ const io = new SocketIO(httpServer, {
 
 // Middleware
 app.use(cors({
-  origin: [
-    process.env.PUBLIC_APP_URL || 'http://localhost:5173',
-    'https://authentic-spontaneity-production-f486.up.railway.app',
-    /\.railway\.app$/  // Allow all Railway subdomains
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
