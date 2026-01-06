@@ -322,11 +322,14 @@
     }
   }
 
-  // Update leader location marker with custom image
+  // Update leader location marker with bicycle emoji
   $: if (map && leaderLocation) {
     const el = document.createElement('div');
     el.className = 'leader-marker';
-    el.innerHTML = '<img src="/leader-marker.png" alt="Leader" style="width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">';
+    el.style.fontSize = '32px';
+    el.style.lineHeight = '1';
+    el.style.filter = 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))';
+    el.innerHTML = '🚴';
 
     if (window.leaderMarker) {
       window.leaderMarker.setLngLat([leaderLocation.lng, leaderLocation.lat]);
@@ -465,10 +468,12 @@
           const el = document.createElement('div');
           el.className = 'leader-marker-multi';
           el.style.cssText = `
-            position: relative;
+            font-size: 28px;
+            line-height: 1;
             cursor: pointer;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
           `;
-          el.innerHTML = '<img src="/leader-marker.png" alt="Leader" style="width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">';
+          el.innerHTML = '🚴';
           el.title = ride.routeName || ride.accessCode;
 
           const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
