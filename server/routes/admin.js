@@ -5,6 +5,7 @@
 
 import express from 'express';
 import bcrypt from 'bcrypt';
+import { nanoid } from 'nanoid';
 import { query, queryOne, queryAll } from '../db/client.js';
 import { sendEmailBlast } from '../services/email.js';
 import { triggerWeeklyDigestForRegion } from '../services/scheduler.js';
@@ -53,15 +54,7 @@ router.post('/login', async (req, res) => {
     if (!admin) {
       // No admin found, use env variable for super admin
       const envPasswordHash = process.env.ADMIN_PASSWORD_HASH || '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU7T90O5XsBq'; // admin123
-
-      console.log('Super admin login attempt:');
-      console.log('- Password provided:', password ? '(provided)' : '(empty)');
-      console.log('- Hash from env:', envPasswordHash ? '(set)' : '(not set)');
-      console.log('- Hash value:', envPasswordHash);
-
       const isValid = await bcrypt.compare(password, envPasswordHash);
-
-      console.log('- Password valid:', isValid);
 
       if (!isValid) {
         return res.status(401).json({
@@ -156,33 +149,6 @@ function requireAdmin(req, res, next) {
 
   req.admin = session;
   next();
-}
-
-// Region-specific admin middleware
-function requireRegionalAdmin(req, res, next) {
-  if (!req.admin) {
-    return res.status(401).json({
-      error: 'Unauthorized'
-    });
-  }
-
-  // Super admin can access any region
-  if (req.admin.role === 'super') {
-    return next();
-  }
-
-  // Regional admin can only access their region
-  const requestedRegion = req.query.region || req.params.region;
-
-  if (requestedRegion && req.admin.region_id) {
-    // Verify region matches
-    // This is simplified - in production, validate against actual region_id
-    return next();
-  }
-
-  res.status(403).json({
-    error: 'Access denied to this region'
-  });
 }
 
 /**
@@ -1325,11 +1291,9 @@ router.delete('/routes/:routeId/icon', requireAdmin, async (req, res) => {
   }
 });
 
-// Helper function to generate session token
+// Helper function to generate session token (cryptographically secure)
 function generateToken() {
-  return Array.from({ length: 32 }, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  ).join('');
+  return nanoid(32);
 }
 
 export default router;

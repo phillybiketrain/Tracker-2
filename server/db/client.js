@@ -12,12 +12,13 @@ const { Pool } = pg;
 dotenv.config();
 
 // Create connection pool
-// Sized for concurrent broadcasts - each ride:start does 2-5 queries
+// With CTE optimization, ride:start uses 1-2 queries instead of 5
+// Pool size should stay within Railway PostgreSQL tier limits (Hobby ~20, Pro ~100)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 30, // Increased for concurrent broadcasts (was 20)
+  max: 20, // Conservative for Railway Hobby tier; increase if on Pro
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000, // Increased timeout (was 2000ms)
+  connectionTimeoutMillis: 5000,
 });
 
 // Track pool health for debugging

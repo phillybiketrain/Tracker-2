@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import Map from '$lib/components/Map.svelte';
   import Markdown from '$lib/components/Markdown.svelte';
   import { io } from 'socket.io-client';
@@ -188,7 +188,7 @@
     }
 
     await endBroadcast();
-    window.location.href = '/manage?code=' + accessCode;
+    goto('/manage?code=' + accessCode);
   }
 
   // Centralized cleanup function

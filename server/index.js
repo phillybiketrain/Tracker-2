@@ -20,7 +20,7 @@ import subscriptionsRouter from './routes/subscriptions.js';
 import { startWeeklyDigestScheduler } from './services/scheduler.js';
 
 // Import database client
-import { query, queryOne, getPoolStats } from './db/client.js';
+import { query, queryOne, queryAll, getPoolStats } from './db/client.js';
 
 // Load environment variables
 dotenv.config();

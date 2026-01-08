@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import Map from '$lib/components/Map.svelte';
   import { io } from 'socket.io-client';
   import { API_URL, SOCKET_URL } from '$lib/config.js';
@@ -190,7 +191,7 @@
 
     broadcasting = false;
     alert('Ride ended!');
-    window.location.href = '/';
+    goto('/');
   }
 
   // Generate dates for next 30 days
