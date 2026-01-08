@@ -89,6 +89,10 @@ app.get('/', (req, res) => {
   });
 });
 
+// Track leader socket IDs for graceful disconnect handling
+// Map: accessCode -> { socketId, startedAt }
+const activeLeaders = new Map();
+
 // WebSocket connection handler
 io.on('connection', (socket) => {
   console.log(`🔌 Client connected: ${socket.id}`);
@@ -138,7 +142,7 @@ io.on('connection', (socket) => {
   socket.on('ride:start', async (data) => {
     const { accessCode } = data;
 
-    console.log(`🚴 Ride start requested: ${accessCode}`);
+    console.log(`🚴 Ride start requested: ${accessCode} from socket ${socket.id}`);
 
     // Join room for this access code
     socket.join(accessCode);
@@ -167,6 +171,8 @@ io.on('connection', (socket) => {
 
       if (rideInstance) {
         console.log(`✅ Rejoining already live ride: ${accessCode}`);
+        // Update leader tracking (in case of reconnect)
+        activeLeaders.set(accessCode, { socketId: socket.id, startedAt: Date.now() });
         socket.emit('ride:started', { accessCode });
         return;
       }
@@ -186,6 +192,7 @@ io.on('connection', (socket) => {
           WHERE id = $1
         `, [rideInstance.id]);
         console.log(`✅ Started scheduled ride: ${accessCode}`);
+        activeLeaders.set(accessCode, { socketId: socket.id, startedAt: Date.now() });
         socket.emit('ride:started', { accessCode });
         return;
       }
@@ -204,6 +211,7 @@ io.on('connection', (socket) => {
           WHERE id = $1
         `, [rideInstance.id]);
         console.log(`✅ Restarted completed ride for today: ${accessCode}`);
+        activeLeaders.set(accessCode, { socketId: socket.id, startedAt: Date.now() });
         socket.emit('ride:started', { accessCode });
         return;
       }
@@ -216,6 +224,7 @@ io.on('connection', (socket) => {
       `, [route.id, route.region_id]);
 
       console.log(`✅ Created new ride instance for ad-hoc broadcast: ${accessCode}`);
+      activeLeaders.set(accessCode, { socketId: socket.id, startedAt: Date.now() });
       socket.emit('ride:started', { accessCode });
 
     } catch (error) {
@@ -228,7 +237,10 @@ io.on('connection', (socket) => {
   socket.on('ride:end', async (data) => {
     const { accessCode } = data;
 
-    console.log(`🏁 Ride end requested: ${accessCode}`);
+    console.log(`🏁 Ride end requested: ${accessCode} from socket ${socket.id}`);
+
+    // Remove from leader tracking
+    activeLeaders.delete(accessCode);
 
     // Leave room
     socket.leave(accessCode);
@@ -356,11 +368,58 @@ io.on('connection', (socket) => {
   });
 
   // Disconnect handler
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log(`🔌 Client disconnected: ${socket.id}`);
 
-    // Clean up any rooms this socket was in
-    // Socket.io handles this automatically
+    // Check if this socket was a ride leader
+    for (const [accessCode, leader] of activeLeaders.entries()) {
+      if (leader.socketId === socket.id) {
+        console.log(`⚠️ Leader for ${accessCode} disconnected - will end ride in 60s if not reconnected`);
+
+        // Set a timeout to end the ride after 60 seconds
+        // This gives the leader a chance to reconnect
+        setTimeout(async () => {
+          // Check if the same socket is still the leader (no reconnect happened)
+          const currentLeader = activeLeaders.get(accessCode);
+          if (currentLeader && currentLeader.socketId === socket.id) {
+            console.log(`⏱️ Leader for ${accessCode} didn't reconnect - ending ride`);
+
+            // Remove from tracking
+            activeLeaders.delete(accessCode);
+
+            // End the ride in database
+            try {
+              const result = await query(`
+                UPDATE ride_instances
+                SET status = 'completed',
+                    ended_at = NOW(),
+                    current_location = NULL,
+                    location_trail = '[]'::jsonb
+                WHERE id IN (
+                  SELECT ri.id
+                  FROM ride_instances ri
+                  JOIN routes r ON ri.route_id = r.id
+                  WHERE r.access_code = $1
+                    AND ri.status = 'live'
+                )
+              `, [accessCode]);
+
+              const rowsUpdated = result.rowCount || 0;
+              if (rowsUpdated > 0) {
+                console.log(`✅ Ride ${accessCode} auto-ended after leader disconnect`);
+              }
+            } catch (error) {
+              console.error(`❌ Failed to auto-end ride ${accessCode}:`, error);
+            }
+
+            // Notify followers
+            io.to(accessCode).emit('ride:ended', { accessCode });
+          }
+        }, 60000); // 60 seconds grace period
+
+        break; // Each socket can only lead one ride
+      }
+    }
   });
 
   // Error handler

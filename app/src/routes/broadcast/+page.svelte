@@ -10,31 +10,15 @@
   let route = null;
   let loading = true;
   let broadcasting = false;
+  let connecting = false; // New: track connection attempt
+  let connectionError = null; // New: track errors
   let followerCount = 0;
   let currentLocation = null;
   let locationTrail = []; // Track leader's path over time
   let socket = null;
   let watchId = null;
   let wakeLock = null; // Keep screen on during broadcast
-
-  onMount(() => {
-    // Check for access code in URL or localStorage
-    const params = new URLSearchParams(window.location.search);
-    const urlCode = params.get('code');
-
-    if (urlCode) {
-      accessCode = urlCode;
-      loadRoute();
-    } else {
-      const savedCode = localStorage.getItem('my_route_code');
-      if (savedCode) {
-        accessCode = savedCode;
-        loadRoute();
-      } else {
-        loading = false;
-      }
-    }
-  });
+  let startTimeout = null; // New: timeout for start attempt
 
   async function loadRoute() {
     loading = true;
@@ -66,6 +50,10 @@
       return;
     }
 
+    // Reset state
+    connecting = true;
+    connectionError = null;
+
     // Request screen wake lock to keep screen on
     try {
       if ('wakeLock' in navigator) {
@@ -75,7 +63,11 @@
         // Re-request wake lock if visibility changes (screen comes back)
         document.addEventListener('visibilitychange', async () => {
           if (document.visibilityState === 'visible' && broadcasting && !wakeLock) {
-            wakeLock = await navigator.wakeLock.request('screen');
+            try {
+              wakeLock = await navigator.wakeLock.request('screen');
+            } catch (e) {
+              console.warn('Failed to re-acquire wake lock:', e);
+            }
           }
         });
       }
@@ -83,15 +75,51 @@
       console.warn('Wake lock not supported or failed:', err);
     }
 
+    // Set timeout for connection attempt (15 seconds)
+    startTimeout = setTimeout(() => {
+      if (connecting && !broadcasting) {
+        connecting = false;
+        connectionError = 'Connection timed out. Please check your internet and try again.';
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+        }
+      }
+    }, 15000);
+
     // Connect to WebSocket
-    socket = io(SOCKET_URL);
+    socket = io(SOCKET_URL, {
+      timeout: 10000,
+      reconnection: true,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 1000
+    });
 
     socket.on('connect', () => {
       console.log('Connected to server');
       socket.emit('ride:start', { accessCode });
     });
 
+    socket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+      clearTimeout(startTimeout);
+      connecting = false;
+      connectionError = 'Failed to connect to server. Please try again.';
+    });
+
+    socket.on('ride:error', (data) => {
+      console.error('Ride error:', data.message);
+      clearTimeout(startTimeout);
+      connecting = false;
+      connectionError = data.message || 'Failed to start ride. Please try again.';
+      socket.disconnect();
+      socket = null;
+    });
+
     socket.on('ride:started', () => {
+      console.log('Ride started successfully');
+      clearTimeout(startTimeout);
+      connecting = false;
       broadcasting = true;
 
       // Start watching position
@@ -109,12 +137,14 @@
             timestamp: Date.now()
           }];
 
-          socket.emit('location:update', {
-            accessCode,
-            lat: latitude,
-            lng: longitude,
-            accuracy
-          });
+          if (socket && socket.connected) {
+            socket.emit('location:update', {
+              accessCode,
+              lat: latitude,
+              lng: longitude,
+              accuracy
+            });
+          }
         },
         (error) => {
           console.error('Geolocation error:', error);
@@ -123,9 +153,24 @@
         {
           enableHighAccuracy: true,
           maximumAge: 0,
-          timeout: 5000
+          timeout: 10000
         }
       );
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      if (broadcasting) {
+        // Don't clear broadcasting state - let user know we're trying to reconnect
+        connectionError = 'Connection lost. Attempting to reconnect...';
+      }
+    });
+
+    socket.on('reconnect', () => {
+      console.log('Reconnected to server');
+      connectionError = null;
+      // Re-emit ride start to rejoin the room
+      socket.emit('ride:start', { accessCode });
     });
 
     socket.on('follower:joined', (data) => {
@@ -142,38 +187,81 @@
       return;
     }
 
+    await endBroadcast();
+    window.location.href = '/manage?code=' + accessCode;
+  }
+
+  // Centralized cleanup function
+  async function endBroadcast() {
+    if (startTimeout) {
+      clearTimeout(startTimeout);
+      startTimeout = null;
+    }
+
     if (watchId) {
       navigator.geolocation.clearWatch(watchId);
+      watchId = null;
     }
 
     if (socket) {
-      socket.emit('ride:end', { accessCode });
+      // Emit ride:end before disconnecting
+      if (broadcasting) {
+        socket.emit('ride:end', { accessCode });
+        // Give it a moment to send
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
       socket.disconnect();
+      socket = null;
     }
 
     // Release wake lock
     if (wakeLock) {
-      await wakeLock.release();
-      wakeLock = null;
-      console.log('Screen wake lock released');
+      try {
+        await wakeLock.release();
+        wakeLock = null;
+        console.log('Screen wake lock released');
+      } catch (e) {
+        console.warn('Failed to release wake lock:', e);
+      }
     }
 
     broadcasting = false;
-    alert('Ride ended successfully!');
-    window.location.href = '/manage?code=' + accessCode;
+    connecting = false;
   }
 
+  // Handle browser close/navigation - try to end ride gracefully
+  function handleBeforeUnload(event) {
+    if (broadcasting && socket) {
+      // Send ride:end synchronously before page unloads
+      socket.emit('ride:end', { accessCode });
+    }
+  }
+
+  onMount(() => {
+    // Check for access code in URL or localStorage
+    const params = new URLSearchParams(window.location.search);
+    const urlCode = params.get('code');
+
+    if (urlCode) {
+      accessCode = urlCode;
+      loadRoute();
+    } else {
+      const savedCode = localStorage.getItem('my_route_code');
+      if (savedCode) {
+        accessCode = savedCode;
+        loadRoute();
+      } else {
+        loading = false;
+      }
+    }
+
+    // Add beforeunload handler
+    window.addEventListener('beforeunload', handleBeforeUnload);
+  });
+
   onDestroy(async () => {
-    if (watchId) {
-      navigator.geolocation.clearWatch(watchId);
-    }
-    if (socket) {
-      socket.disconnect();
-    }
-    if (wakeLock) {
-      await wakeLock.release();
-      wakeLock = null;
-    }
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    await endBroadcast();
   });
 </script>
 
@@ -263,17 +351,29 @@
             </ul>
           </div>
 
+          {#if connectionError}
+            <div class="p-4 bg-red-50 border border-red-200 rounded mb-6">
+              <p class="text-sm text-red-800">{connectionError}</p>
+            </div>
+          {/if}
+
           <div class="flex gap-3">
             <button
               on:click={startBroadcasting}
-              class="btn btn-primary py-4 text-lg flex-[3]"
+              disabled={connecting}
+              class="btn btn-primary py-4 text-lg flex-[3] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Start Broadcasting
+              {#if connecting}
+                <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Connecting...
+              {:else}
+                Start Broadcasting
+              {/if}
             </button>
 
             <a
               href="/manage?code={accessCode}"
-              class="btn btn-secondary py-4 flex-1 flex items-center justify-center"
+              class="btn btn-secondary py-4 flex-1 flex items-center justify-center {connecting ? 'pointer-events-none opacity-50' : ''}"
             >
               Back
             </a>
@@ -294,6 +394,14 @@
             End Ride
           </button>
         </div>
+
+        <!-- Connection Warning Banner -->
+        {#if connectionError}
+          <div class="px-4 py-2 bg-yellow-500 text-yellow-900 text-sm font-medium flex items-center gap-2">
+            <div class="w-4 h-4 border-2 border-yellow-900 border-t-transparent rounded-full animate-spin"></div>
+            {connectionError}
+          </div>
+        {/if}
 
         <!-- Compact Info Bar -->
         <div class="px-4 py-2 bg-white border-b border-warm-gray-200">
