@@ -20,7 +20,7 @@ import subscriptionsRouter from './routes/subscriptions.js';
 import { startWeeklyDigestScheduler } from './services/scheduler.js';
 
 // Import database client
-import { query, queryOne } from './db/client.js';
+import { query, queryOne, getPoolStats } from './db/client.js';
 
 // Load environment variables
 dotenv.config();
@@ -36,14 +36,24 @@ const allowedOrigins = [
   /phillybiketrain\.org$/  // Allow custom domain (with or without www)
 ];
 
-// Initialize Socket.io
+// Initialize Socket.io with optimized settings for concurrent broadcasts
 const io = new SocketIO(httpServer, {
   cors: {
     origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
-  }
+  },
+  // Connection settings for mobile reliability
+  pingTimeout: 60000,     // How long to wait for pong (60s for mobile)
+  pingInterval: 25000,    // How often to ping (25s)
+  connectTimeout: 45000,  // Connection timeout (45s)
+  maxHttpBufferSize: 1e6, // 1MB max message size
+  transports: ['websocket', 'polling'], // Prefer websocket, fallback to polling
 });
+
+// Track leader socket IDs for graceful disconnect handling
+// Map: accessCode -> { socketId, startedAt }
+const activeLeaders = new Map();
 
 // Middleware
 app.use(cors({
@@ -66,12 +76,21 @@ app.use('/api/rides', ridesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
 
-// Health check
+// Health check with detailed stats
 app.get('/api/health', (req, res) => {
+  const poolStats = getPoolStats();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    database: {
+      pool: poolStats,
+      healthy: poolStats.waitingCount < 10 // Warning if many waiting
+    },
+    sockets: {
+      connected: io.engine.clientsCount,
+      activeLeaders: activeLeaders ? activeLeaders.size : 0
+    }
   });
 });
 
@@ -88,10 +107,6 @@ app.get('/', (req, res) => {
     }
   });
 });
-
-// Track leader socket IDs for graceful disconnect handling
-// Map: accessCode -> { socketId, startedAt }
-const activeLeaders = new Map();
 
 // WebSocket connection handler
 io.on('connection', (socket) => {
@@ -141,6 +156,7 @@ io.on('connection', (socket) => {
   // Leader starts broadcasting
   socket.on('ride:start', async (data) => {
     const { accessCode } = data;
+    const startTime = Date.now();
 
     console.log(`🚴 Ride start requested: ${accessCode} from socket ${socket.id}`);
 
@@ -148,88 +164,91 @@ io.on('connection', (socket) => {
     socket.join(accessCode);
 
     try {
-      // Get the route first
-      const route = await queryOne(`
-        SELECT id, region_id, name FROM routes WHERE access_code = $1
+      // OPTIMIZED: Single query to get route + best ride instance candidate
+      // Uses CTE to find the best instance in priority order
+      const result = await queryOne(`
+        WITH route AS (
+          SELECT id, region_id, name
+          FROM routes
+          WHERE access_code = $1
+        ),
+        best_instance AS (
+          SELECT ri.id, ri.status,
+            CASE
+              WHEN ri.status = 'live' THEN 1
+              WHEN ri.status = 'scheduled' THEN 2
+              WHEN ri.status = 'completed' AND ri.date = CURRENT_DATE THEN 3
+              ELSE 4
+            END as priority
+          FROM ride_instances ri
+          WHERE ri.route_id = (SELECT id FROM route)
+            AND ri.status IN ('live', 'scheduled', 'completed')
+          ORDER BY
+            priority,
+            ABS(ri.date - CURRENT_DATE)
+          LIMIT 1
+        )
+        SELECT
+          r.id as route_id,
+          r.region_id,
+          r.name,
+          bi.id as instance_id,
+          bi.status as instance_status
+        FROM route r
+        LEFT JOIN best_instance bi ON true
       `, [accessCode]);
 
-      if (!route) {
+      if (!result || !result.route_id) {
         console.error(`❌ Route not found for access code: ${accessCode}`);
         socket.emit('ride:error', { message: 'Route not found' });
         return;
       }
 
-      // Strategy: Find or create a ride instance to mark as live
-      // Priority: 1) Already live, 2) Scheduled for today, 3) Any scheduled, 4) Completed today, 5) Create new
+      const { route_id, region_id, name, instance_id, instance_status } = result;
 
-      // 1. Check if already live (rejoin scenario)
-      let rideInstance = await queryOne(`
-        SELECT ri.id FROM ride_instances ri
-        WHERE ri.route_id = $1 AND ri.status = 'live'
-        LIMIT 1
-      `, [route.id]);
-
-      if (rideInstance) {
-        console.log(`✅ Rejoining already live ride: ${accessCode}`);
-        // Update leader tracking (in case of reconnect)
+      // Handle based on what we found
+      if (instance_status === 'live') {
+        // Already live - just rejoin
+        console.log(`✅ Rejoining already live ride: ${accessCode} (${Date.now() - startTime}ms)`);
         activeLeaders.set(accessCode, { socketId: socket.id, startedAt: Date.now() });
         socket.emit('ride:started', { accessCode });
         return;
       }
 
-      // 2. Try to find a scheduled ride (prefer today, then nearest date)
-      rideInstance = await queryOne(`
-        SELECT ri.id FROM ride_instances ri
-        WHERE ri.route_id = $1 AND ri.status = 'scheduled'
-        ORDER BY ABS(ri.date - CURRENT_DATE), ri.date
-        LIMIT 1
-      `, [route.id]);
-
-      if (rideInstance) {
+      if (instance_id && (instance_status === 'scheduled' || instance_status === 'completed')) {
+        // Update existing instance to live
         await query(`
           UPDATE ride_instances
           SET status = 'live', started_at = NOW(), current_location = NULL, location_trail = '[]'::jsonb
           WHERE id = $1
-        `, [rideInstance.id]);
-        console.log(`✅ Started scheduled ride: ${accessCode}`);
+        `, [instance_id]);
+        console.log(`✅ Started ${instance_status} ride: ${accessCode} (${Date.now() - startTime}ms)`);
         activeLeaders.set(accessCode, { socketId: socket.id, startedAt: Date.now() });
         socket.emit('ride:started', { accessCode });
         return;
       }
 
-      // 3. Try to find a completed ride for today (restart scenario)
-      rideInstance = await queryOne(`
-        SELECT ri.id FROM ride_instances ri
-        WHERE ri.route_id = $1 AND ri.status = 'completed' AND ri.date = CURRENT_DATE
-        LIMIT 1
-      `, [route.id]);
-
-      if (rideInstance) {
-        await query(`
-          UPDATE ride_instances
-          SET status = 'live', started_at = NOW(), current_location = NULL, location_trail = '[]'::jsonb
-          WHERE id = $1
-        `, [rideInstance.id]);
-        console.log(`✅ Restarted completed ride for today: ${accessCode}`);
-        activeLeaders.set(accessCode, { socketId: socket.id, startedAt: Date.now() });
-        socket.emit('ride:started', { accessCode });
-        return;
-      }
-
-      // 4. No ride instance exists - create one for today (ad-hoc broadcast)
-      rideInstance = await queryOne(`
+      // No existing instance - create new one for today
+      // Use ON CONFLICT to handle race condition if two clients try simultaneously
+      const newInstance = await queryOne(`
         INSERT INTO ride_instances (route_id, date, status, region_id, started_at)
         VALUES ($1, CURRENT_DATE, 'live', $2, NOW())
+        ON CONFLICT (route_id, date)
+        DO UPDATE SET
+          status = 'live',
+          started_at = NOW(),
+          current_location = NULL,
+          location_trail = '[]'::jsonb
         RETURNING id
-      `, [route.id, route.region_id]);
+      `, [route_id, region_id]);
 
-      console.log(`✅ Created new ride instance for ad-hoc broadcast: ${accessCode}`);
+      console.log(`✅ Created/updated ride instance for: ${accessCode} (${Date.now() - startTime}ms)`);
       activeLeaders.set(accessCode, { socketId: socket.id, startedAt: Date.now() });
       socket.emit('ride:started', { accessCode });
 
     } catch (error) {
       console.error(`❌ Failed to start ride ${accessCode}:`, error);
-      socket.emit('ride:error', { message: 'Failed to start ride' });
+      socket.emit('ride:error', { message: 'Failed to start ride. Please try again.' });
     }
   });
 

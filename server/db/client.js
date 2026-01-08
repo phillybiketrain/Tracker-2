@@ -12,12 +12,20 @@ const { Pool } = pg;
 dotenv.config();
 
 // Create connection pool
+// Sized for concurrent broadcasts - each ride:start does 2-5 queries
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum connections
+  max: 30, // Increased for concurrent broadcasts (was 20)
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000, // Increased timeout (was 2000ms)
 });
+
+// Track pool health for debugging
+let poolStats = { acquired: 0, released: 0, errors: 0 };
+
+pool.on('acquire', () => { poolStats.acquired++; });
+pool.on('release', () => { poolStats.released++; });
+pool.on('error', () => { poolStats.errors++; });
 
 // Log pool errors
 pool.on('error', (err) => {
@@ -79,4 +87,16 @@ export async function closePool() {
   console.log('Database pool closed');
 }
 
-export default { query, queryOne, queryAll, closePool };
+/**
+ * Get pool statistics for health monitoring
+ */
+export function getPoolStats() {
+  return {
+    totalCount: pool.totalCount,
+    idleCount: pool.idleCount,
+    waitingCount: pool.waitingCount,
+    ...poolStats
+  };
+}
+
+export default { query, queryOne, queryAll, closePool, getPoolStats };
