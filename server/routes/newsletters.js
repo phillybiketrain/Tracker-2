@@ -450,13 +450,6 @@ router.post('/:id/test', requireAdmin, async (req, res) => {
       html: html
     });
 
-    // Update last test info
-    await query(`
-      UPDATE newsletters
-      SET last_test_sent_at = NOW(), last_test_email = $1
-      WHERE id = $2
-    `, [email, id]);
-
     console.log(`📧 Test email sent to ${email} for newsletter: ${newsletter.name}`);
 
     res.json({
