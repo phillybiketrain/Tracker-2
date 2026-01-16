@@ -14,7 +14,8 @@ import { upload, uploadToCloudinary, deleteFromCloudinary } from '../utils/uploa
 const router = express.Router();
 
 // Simple session store (in production, use Redis or similar)
-const activeSessions = new Map();
+// Exported for use by other routes that need admin auth
+export const activeSessions = new Map();
 
 /**
  * POST /api/admin/login
@@ -127,8 +128,8 @@ router.post('/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// Auth middleware
-function requireAdmin(req, res, next) {
+// Auth middleware - exported for use by other routes
+export function requireAdmin(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
 
   if (!token || !activeSessions.has(token)) {

@@ -198,6 +198,9 @@
           <a href="/admin/routes" class="text-sm text-warm-gray-700 hover:text-warm-gray-900">
             Manage Routes
           </a>
+          <a href="/admin/newsletter" class="text-sm text-warm-gray-700 hover:text-warm-gray-900">
+            Newsletter
+          </a>
           <a href="/admin/email-blast" class="text-sm text-warm-gray-700 hover:text-warm-gray-900">
             Email Blast
           </a>
