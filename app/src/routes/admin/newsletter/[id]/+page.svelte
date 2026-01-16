@@ -39,6 +39,8 @@
   let lastSaved = null;
   let openBlockMenu = null; // index of block with open menu
   let subscriberCount = 0;
+  let collapsedBlocks = new Set(); // track collapsed block indices
+  let subjectCollapsed = false;
 
   // Available block types
   const blockTypes = [
@@ -84,6 +86,32 @@
 
   function closeBlockMenu() {
     openBlockMenu = null;
+  }
+
+  function toggleBlockCollapse(index) {
+    if (collapsedBlocks.has(index)) {
+      collapsedBlocks.delete(index);
+    } else {
+      collapsedBlocks.add(index);
+    }
+    collapsedBlocks = collapsedBlocks; // trigger reactivity
+  }
+
+  function getBlockSummary(block) {
+    switch (block.type) {
+      case 'header':
+        return block.data?.title || 'Philly Bike Train';
+      case 'text':
+        return block.data?.subhead || block.data?.paragraphs?.[0]?.slice(0, 40) || 'Text block';
+      case 'upcoming_rides':
+        return block.data?.title || 'Upcoming Rides';
+      case 'photo':
+        return `${block.data?.images?.length || 0} image(s)`;
+      case 'divider':
+        return block.data?.style || 'line';
+      default:
+        return block.type;
+    }
   }
 
   async function loadNewsletter() {
@@ -454,34 +482,49 @@
         <!-- Editor Panel -->
         <div class="space-y-4">
           <!-- Subject & Preheader -->
-          <div class="bg-white rounded-lg border border-warm-gray-200 p-4">
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-warm-gray-700 mb-1">Subject Line *</label>
-                <input
-                  type="text"
-                  bind:value={newsletter.subject}
-                  on:input={triggerAutoSave}
-                  placeholder="What's this newsletter about?"
-                  disabled={newsletter.status === 'sent'}
-                  class="w-full px-3 py-2 border border-warm-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
+          <div class="bg-white rounded-lg border border-warm-gray-200 overflow-hidden">
+            <button
+              on:click={() => subjectCollapsed = !subjectCollapsed}
+              class="w-full flex items-center justify-between px-4 py-2 bg-warm-gray-50 border-b border-warm-gray-200 hover:bg-warm-gray-100 transition-colors"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-lg">✉️</span>
+                <span class="text-sm font-medium text-warm-gray-700">Subject Line</span>
+                {#if subjectCollapsed && newsletter.subject}
+                  <span class="text-sm text-warm-gray-500 truncate max-w-48">— {newsletter.subject}</span>
+                {/if}
               </div>
-              <div>
-                <label class="block text-sm font-medium text-warm-gray-700 mb-1">
-                  Preview Text
-                  <span class="font-normal text-warm-gray-500">(shown in inbox)</span>
-                </label>
-                <input
-                  type="text"
-                  bind:value={newsletter.preheader}
-                  on:input={triggerAutoSave}
-                  placeholder="A brief summary that appears in email clients..."
-                  disabled={newsletter.status === 'sent'}
-                  class="w-full px-3 py-2 border border-warm-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-                />
+              <span class="text-warm-gray-400 text-sm">{subjectCollapsed ? '▶' : '▼'}</span>
+            </button>
+            {#if !subjectCollapsed}
+              <div class="p-4 space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-warm-gray-700 mb-1">Subject Line *</label>
+                  <input
+                    type="text"
+                    bind:value={newsletter.subject}
+                    on:input={triggerAutoSave}
+                    placeholder="What's this newsletter about?"
+                    disabled={newsletter.status === 'sent'}
+                    class="w-full px-3 py-2 border border-warm-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-warm-gray-700 mb-1">
+                    Preview Text
+                    <span class="font-normal text-warm-gray-500">(shown in inbox)</span>
+                  </label>
+                  <input
+                    type="text"
+                    bind:value={newsletter.preheader}
+                    on:input={triggerAutoSave}
+                    placeholder="A brief summary that appears in email clients..."
+                    disabled={newsletter.status === 'sent'}
+                    class="w-full px-3 py-2 border border-warm-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                  />
+                </div>
               </div>
-            </div>
+            {/if}
           </div>
 
           <!-- Blocks -->
@@ -490,7 +533,11 @@
               <div class="bg-white rounded-lg border border-warm-gray-200 overflow-hidden">
                 <!-- Block Header -->
                 <div class="flex items-center justify-between px-4 py-2 bg-warm-gray-50 border-b border-warm-gray-200">
-                  <div class="flex items-center gap-2">
+                  <button
+                    on:click={() => toggleBlockCollapse(index)}
+                    class="flex items-center gap-2 flex-1 text-left hover:bg-warm-gray-100 -ml-2 pl-2 py-1 rounded transition-colors"
+                  >
+                    <span class="text-warm-gray-400 text-xs">{collapsedBlocks.has(index) ? '▶' : '▼'}</span>
                     <span class="text-lg">
                       {#if block.type === 'header'}🚲
                       {:else if block.type === 'text'}¶
@@ -500,7 +547,10 @@
                       {/if}
                     </span>
                     <span class="text-sm font-medium text-warm-gray-700 capitalize">{block.type.replace('_', ' ')}</span>
-                  </div>
+                    {#if collapsedBlocks.has(index)}
+                      <span class="text-sm text-warm-gray-500 truncate max-w-48">— {getBlockSummary(block)}</span>
+                    {/if}
+                  </button>
 
                   {#if block.type !== 'header' && newsletter.status !== 'sent'}
                     <div class="flex items-center gap-1">
@@ -532,6 +582,7 @@
                 </div>
 
                 <!-- Block Content -->
+                {#if !collapsedBlocks.has(index)}
                 <div class="p-4">
                   {#if block.type === 'header'}
                     <HeaderBlock
@@ -566,6 +617,7 @@
                     />
                   {/if}
                 </div>
+                {/if}
               </div>
 
               <!-- Add Block Button (between blocks) -->
@@ -629,19 +681,19 @@
               </div>
             </div>
 
-            <div class="flex-1 overflow-auto p-4 bg-warm-gray-100">
-              <div class="mx-auto transition-all duration-300 {viewMode === 'mobile' ? 'max-w-[375px]' : 'max-w-[600px]'}">
+            <div class="flex-1 overflow-auto p-4 bg-warm-gray-100 flex flex-col">
+              <div class="mx-auto transition-all duration-300 flex-1 flex flex-col {viewMode === 'mobile' ? 'max-w-[375px]' : 'max-w-[600px]'} w-full">
                 {#if previewLoading && !previewHtml}
                   <div class="text-center py-12">
                     <p class="text-warm-gray-500">Loading preview...</p>
                   </div>
                 {:else if previewHtml}
-                  <div class="bg-white rounded shadow-sm overflow-hidden">
+                  <div class="bg-white rounded shadow-sm overflow-hidden flex-1 flex flex-col">
                     <iframe
                       srcdoc={previewHtml}
                       title="Email Preview"
-                      class="w-full border-0"
-                      style="height: 800px;"
+                      class="w-full border-0 flex-1"
+                      style="min-height: 500px;"
                     />
                   </div>
                 {:else}

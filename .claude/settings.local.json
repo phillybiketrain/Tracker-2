@@ -39,7 +39,19 @@
       "Bash(git mv:*)",
       "Bash(git rm:*)",
       "Bash(npm install:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(node index.js:*)",
+      "Bash(nul)",
+      "Bash(git -C /c/dev2/PBT log --oneline -20)",
+      "Bash(railway run:*)",
+      "Bash(railway status:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(xargs:*)",
+      "Bash(dir:*)",
+      "Bash(railway link:*)",
+      "Bash(railway variables:*)",
+      "Bash(git diff:*)"
     ],
     "deny": [],
     "ask": []

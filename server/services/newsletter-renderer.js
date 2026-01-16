@@ -217,41 +217,38 @@ async function renderUpcomingRides(data = {}, regionId) {
     `;
   }
 
-  // Build ride cards
-  const rideCards = rides.map(ride => {
+  // Build ride rows using MJML table for better email client support
+  const rideRows = rides.map(ride => {
     const date = new Date(ride.date).toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
+      weekday: 'short',
+      month: 'short',
       day: 'numeric'
     });
 
+    const descText = showDescription && ride.description
+      ? `<br><span style="color: ${COLORS.textLight}; font-size: 13px;">${escapeHtml(ride.description.slice(0, 60))}${ride.description.length > 60 ? '...' : ''}</span>`
+      : '';
+
     return `
-      <div style="margin-bottom: 15px; padding: 15px; border-left: 3px solid ${COLORS.primary}; background: ${COLORS.cardBg}; border-radius: 0 8px 8px 0;">
-        <div style="font-weight: 600; font-size: 17px; color: ${COLORS.text}; margin-bottom: 5px;">
-          ${escapeHtml(ride.route_name)}
-        </div>
-        ${showDescription && ride.description ? `
-          <div style="color: ${COLORS.textLight}; font-size: 14px; margin-bottom: 8px;">
-            ${escapeHtml(ride.description)}
-          </div>
-        ` : ''}
-        <div style="font-size: 14px; color: ${COLORS.text};">
-          ${date} at ${ride.departure_time}
-          ${showDistance && ride.distance_miles ? ` &bull; ${ride.distance_miles} mi` : ''}
-        </div>
-      </div>
+      <tr>
+        <td style="padding: 10px 12px; border-left: 3px solid ${COLORS.primary}; background: ${COLORS.cardBg}; margin-bottom: 8px;">
+          <strong style="color: ${COLORS.text}; font-size: 15px;">${escapeHtml(ride.route_name)}</strong>${descText}
+          <br><span style="color: ${COLORS.textLight}; font-size: 13px;">${date} at ${ride.departure_time}${showDistance && ride.distance_miles ? ` • ${ride.distance_miles} mi` : ''}</span>
+        </td>
+      </tr>
+      <tr><td style="height: 8px;"></td></tr>
     `;
   }).join('');
 
   return `
-    <mj-section background-color="${COLORS.white}" padding="25px 20px">
+    <mj-section background-color="${COLORS.white}" padding="20px">
       <mj-column>
-        <mj-text font-size="22px" font-weight="600" color="${COLORS.text}" padding="0 0 15px 0">
+        <mj-text font-size="20px" font-weight="600" color="${COLORS.text}" padding="0 0 12px 0">
           ${escapeHtml(title)}
         </mj-text>
-        <mj-text padding="0">
-          ${rideCards}
-        </mj-text>
+        <mj-table>
+          ${rideRows}
+        </mj-table>
       </mj-column>
     </mj-section>
   `;
