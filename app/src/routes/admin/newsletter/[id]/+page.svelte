@@ -37,6 +37,8 @@
   let viewMode = 'desktop'; // desktop | mobile
   let autoSaveTimeout = null;
   let lastSaved = null;
+  let openBlockMenu = null; // index of block with open menu
+  let subscriberCount = 0;
 
   // Available block types
   const blockTypes = [
@@ -59,7 +61,30 @@
     }
 
     loadNewsletter();
+    loadSubscriberCount();
   });
+
+  async function loadSubscriberCount() {
+    try {
+      const res = await fetch(`${API_URL}/admin/stats?region=${region}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        subscriberCount = data.data?.total_subscribers || 0;
+      }
+    } catch (err) {
+      console.error('Error loading subscriber count:', err);
+    }
+  }
+
+  function toggleBlockMenu(index) {
+    openBlockMenu = openBlockMenu === index ? null : index;
+  }
+
+  function closeBlockMenu() {
+    openBlockMenu = null;
+  }
 
   async function loadNewsletter() {
     loading = true;
@@ -138,13 +163,14 @@
       ];
     }
 
+    openBlockMenu = null; // Close menu after adding
     triggerAutoSave();
   }
 
   function getDefaultBlockData(type) {
     switch (type) {
       case 'header':
-        return { title: 'Philly Bike Train', subtitle: '' };
+        return { title: 'Philly Bike Train', subtitle: '', backgroundColor: '#FF9F66' };
       case 'text':
         return { subhead: '', paragraphs: [''], alignment: 'left' };
       case 'upcoming_rides':
@@ -388,13 +414,22 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-4">
+          <!-- Subscriber count -->
+          <div class="text-sm text-warm-gray-600">
+            <span class="font-medium">{subscriberCount}</span> subscribers
+          </div>
+
           {#if newsletter.status !== 'sent'}
+            <!-- Test email button with address shown -->
             <button
               on:click={() => showTestModal = true}
-              class="px-4 py-2 text-sm bg-warm-gray-100 text-warm-gray-700 rounded hover:bg-warm-gray-200 transition-colors"
+              class="px-4 py-2 text-sm bg-warm-gray-100 text-warm-gray-700 rounded hover:bg-warm-gray-200 transition-colors flex items-center gap-2"
             >
-              Send Test
+              <span>Send Test</span>
+              {#if testEmail}
+                <span class="text-xs text-warm-gray-500">→ {testEmail}</span>
+              {/if}
             </button>
             <button
               on:click={() => showSendConfirm = true}
@@ -536,26 +571,29 @@
               <!-- Add Block Button (between blocks) -->
               {#if newsletter.status !== 'sent' && block.type !== 'footer'}
                 <div class="flex justify-center">
-                  <div class="relative group">
+                  <div class="relative">
                     <button
+                      on:click={() => toggleBlockMenu(index)}
                       class="px-4 py-2 text-sm text-warm-gray-500 hover:text-warm-gray-700 border-2 border-dashed border-warm-gray-300 hover:border-warm-gray-400 rounded-lg transition-colors"
                     >
                       + Add Block
                     </button>
-                    <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:flex flex-col bg-white border border-warm-gray-200 rounded-lg shadow-lg py-2 min-w-48 z-10">
-                      {#each blockTypes as bt}
-                        <button
-                          on:click={() => addBlock(bt.type, index)}
-                          class="flex items-center gap-3 px-4 py-2 text-left hover:bg-warm-gray-50"
-                        >
-                          <span class="text-lg">{bt.icon}</span>
-                          <div>
-                            <div class="text-sm font-medium text-warm-gray-900">{bt.label}</div>
-                            <div class="text-xs text-warm-gray-500">{bt.description}</div>
-                          </div>
-                        </button>
-                      {/each}
-                    </div>
+                    {#if openBlockMenu === index}
+                      <div class="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex flex-col bg-white border border-warm-gray-200 rounded-lg shadow-lg py-2 min-w-48 z-20">
+                        {#each blockTypes as bt}
+                          <button
+                            on:click={() => addBlock(bt.type, index)}
+                            class="flex items-center gap-3 px-4 py-2 text-left hover:bg-warm-gray-50"
+                          >
+                            <span class="text-lg">{bt.icon}</span>
+                            <div>
+                              <div class="text-sm font-medium text-warm-gray-900">{bt.label}</div>
+                              <div class="text-xs text-warm-gray-500">{bt.description}</div>
+                            </div>
+                          </button>
+                        {/each}
+                      </div>
+                    {/if}
                   </div>
                 </div>
               {/if}
@@ -659,11 +697,14 @@
     <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
       <h3 class="text-lg font-bold text-warm-gray-900 mb-2">Send Newsletter?</h3>
       <p class="text-warm-gray-600 mb-4">
-        This will send the newsletter to all verified subscribers. This action cannot be undone.
+        This will send the newsletter to <strong>{subscriberCount}</strong> verified subscribers. This action cannot be undone.
       </p>
       <div class="bg-warm-gray-50 rounded p-3 mb-4">
         <div class="text-sm">
           <strong>Subject:</strong> {newsletter.subject}
+        </div>
+        <div class="text-sm mt-1">
+          <strong>Recipients:</strong> {subscriberCount} subscribers
         </div>
       </div>
       <div class="flex justify-end gap-3">

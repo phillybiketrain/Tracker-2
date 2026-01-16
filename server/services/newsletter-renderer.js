@@ -103,10 +103,10 @@ async function renderBlock(block, regionId) {
  * Render header block
  */
 function renderHeader(data = {}) {
-  const { title = 'Philly Bike Train', subtitle = '' } = data;
+  const { title = 'Philly Bike Train', subtitle = '', backgroundColor = COLORS.primary } = data;
 
   return `
-    <mj-section background-color="${COLORS.primary}" padding="30px 20px">
+    <mj-section background-color="${backgroundColor}" padding="30px 20px">
       <mj-column>
         <mj-text align="center" color="${COLORS.white}" font-size="28px" font-weight="700" padding="0">
           ${escapeHtml(title)}
