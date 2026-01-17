@@ -201,6 +201,9 @@
           <a href="/admin/newsletter" class="text-sm text-warm-gray-700 hover:text-warm-gray-900">
             Newsletter
           </a>
+          <a href="/admin/subscribers" class="text-sm text-warm-gray-700 hover:text-warm-gray-900">
+            Subscribers
+          </a>
           <a href="/admin/email-blast" class="text-sm text-warm-gray-700 hover:text-warm-gray-900">
             Email Blast
           </a>
@@ -244,10 +247,10 @@
             <div class="text-xs text-warm-gray-600 mt-1">Live Now</div>
           </div>
 
-          <div class="bg-white rounded-lg border border-warm-gray-200 p-4">
+          <a href="/admin/subscribers" class="bg-white rounded-lg border border-warm-gray-200 p-4 hover:border-primary hover:shadow-sm transition-all block">
             <div class="text-2xl font-bold text-warm-gray-900">{stats.total_subscribers}</div>
             <div class="text-xs text-warm-gray-600 mt-1">Subscribers</div>
-          </div>
+          </a>
         </div>
       {/if}
 

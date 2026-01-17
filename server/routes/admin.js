@@ -1292,6 +1292,122 @@ router.delete('/routes/:routeId/icon', requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/subscribers
+ * List all subscribers for a region
+ */
+router.get('/subscribers', requireAdmin, async (req, res) => {
+  try {
+    const { region = 'philly', page = 1, limit = 50, search = '' } = req.query;
+
+    // Get region_id
+    const regionData = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [region]);
+
+    if (!regionData) {
+      return res.status(400).json({ error: 'Invalid region' });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== regionData.id) {
+      return res.status(403).json({ error: 'Access denied to this region' });
+    }
+
+    // Build search filter
+    const searchFilter = search ? 'AND s.email ILIKE $4' : '';
+    const params = search
+      ? [regionData.id, parseInt(limit), (parseInt(page) - 1) * parseInt(limit), `%${search}%`]
+      : [regionData.id, parseInt(limit), (parseInt(page) - 1) * parseInt(limit)];
+
+    // Get total count
+    const countParams = search ? [regionData.id, `%${search}%`] : [regionData.id];
+    const { count } = await queryOne(`
+      SELECT COUNT(*) as count
+      FROM email_subscribers s
+      WHERE s.region_id = $1 ${search ? 'AND s.email ILIKE $2' : ''}
+    `, countParams);
+
+    // Get subscribers
+    const subscribers = await queryAll(`
+      SELECT
+        s.id,
+        s.email,
+        s.all_routes,
+        s.tags,
+        s.verified_at,
+        s.subscribed_at,
+        s.last_email_sent
+      FROM email_subscribers s
+      WHERE s.region_id = $1 ${searchFilter}
+      ORDER BY s.subscribed_at DESC
+      LIMIT $2 OFFSET $3
+    `, params);
+
+    res.json({
+      success: true,
+      data: subscribers,
+      pagination: {
+        total: parseInt(count),
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(parseInt(count) / parseInt(limit))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching subscribers:', error);
+    res.status(500).json({
+      error: 'Failed to fetch subscribers',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/admin/subscribers/:id
+ * Remove a subscriber
+ */
+router.delete('/subscribers/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get subscriber to check region access
+    const subscriber = await queryOne(`
+      SELECT s.*, r.slug as region_slug
+      FROM email_subscribers s
+      JOIN regions r ON s.region_id = r.id
+      WHERE s.id = $1
+    `, [id]);
+
+    if (!subscriber) {
+      return res.status(404).json({ error: 'Subscriber not found' });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== subscriber.region_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Delete subscriber
+    await query(`DELETE FROM email_subscribers WHERE id = $1`, [id]);
+
+    console.log(`🗑️ Subscriber removed: ${subscriber.email}`);
+
+    res.json({
+      success: true,
+      message: 'Subscriber removed'
+    });
+
+  } catch (error) {
+    console.error('Error removing subscriber:', error);
+    res.status(500).json({
+      error: 'Failed to remove subscriber',
+      message: error.message
+    });
+  }
+});
+
 // Helper function to generate session token (cryptographically secure)
 function generateToken() {
   return nanoid(32);
