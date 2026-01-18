@@ -1254,10 +1254,14 @@ router.get('/subscribers', requireAdmin, async (req, res) => {
   try {
     const { region = 'philly', page = 1, limit = 50, search = '' } = req.query;
 
+    console.log(`📋 GET subscribers request for region '${region}'`);
+
     // Get region_id
     const regionData = await queryOne(`
       SELECT id FROM regions WHERE slug = $1
     `, [region]);
+
+    console.log(`📋 Found region_id: ${regionData?.id}`);
 
     if (!regionData) {
       return res.status(400).json({ error: 'Invalid region' });
@@ -1281,6 +1285,8 @@ router.get('/subscribers', requireAdmin, async (req, res) => {
       FROM email_subscribers s
       WHERE s.region_id = $1 ${search ? 'AND s.email ILIKE $2' : ''}
     `, countParams);
+
+    console.log(`📋 Found ${count} subscribers for region_id ${regionData.id}`);
 
     // Get subscribers
     const subscribers = await queryAll(`
@@ -1379,6 +1385,8 @@ router.post('/subscribers/import', requireAdmin, async (req, res) => {
       SELECT id FROM regions WHERE slug = $1
     `, [region]);
 
+    console.log(`📥 Import request for region '${region}', found region_id: ${regionData?.id}`);
+
     if (!regionData) {
       return res.status(400).json({ error: 'Invalid region' });
     }
@@ -1420,18 +1428,28 @@ router.post('/subscribers/import', requireAdmin, async (req, res) => {
         const unsubscribeToken = nanoid(32);
 
         // Insert subscriber (pre-verified since admin is importing)
-        await query(`
+        const inserted = await queryOne(`
           INSERT INTO email_subscribers (email, region_id, all_routes, unsubscribe_token, verified_at)
           VALUES ($1, $2, true, $3, NOW())
+          RETURNING id, email
         `, [email, regionData.id, unsubscribeToken]);
 
-        imported++;
+        if (inserted) {
+          imported++;
+          console.log(`  ✓ Inserted subscriber ${inserted.id}: ${inserted.email}`);
+        }
       } catch (err) {
+        console.error(`  ✗ Failed to insert ${email}:`, err.message);
         errors.push({ email, error: err.message });
       }
     }
 
-    console.log(`📥 Imported ${imported} subscribers, skipped ${skipped} duplicates`);
+    // Verify the count in the database
+    const { count: dbCount } = await queryOne(`
+      SELECT COUNT(*) as count FROM email_subscribers WHERE region_id = $1
+    `, [regionData.id]);
+
+    console.log(`📥 Imported ${imported} subscribers, skipped ${skipped} duplicates. Total in DB: ${dbCount}`);
 
     res.json({
       success: true,
