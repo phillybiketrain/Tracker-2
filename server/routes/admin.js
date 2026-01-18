@@ -1408,6 +1408,94 @@ router.delete('/subscribers/:id', requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/admin/subscribers/import
+ * Bulk import subscribers from a list of emails
+ */
+router.post('/subscribers/import', requireAdmin, async (req, res) => {
+  try {
+    const { region = 'philly', emails = [] } = req.body;
+
+    if (!emails || emails.length === 0) {
+      return res.status(400).json({ error: 'No emails provided' });
+    }
+
+    // Get region_id
+    const regionData = await queryOne(`
+      SELECT id FROM regions WHERE slug = $1
+    `, [region]);
+
+    if (!regionData) {
+      return res.status(400).json({ error: 'Invalid region' });
+    }
+
+    // Check access
+    if (req.admin.role !== 'super' && req.admin.region_id !== regionData.id) {
+      return res.status(403).json({ error: 'Access denied to this region' });
+    }
+
+    // Validate and dedupe emails
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const validEmails = [...new Set(
+      emails
+        .map(e => e.trim().toLowerCase())
+        .filter(e => emailRegex.test(e))
+    )];
+
+    if (validEmails.length === 0) {
+      return res.status(400).json({ error: 'No valid email addresses found' });
+    }
+
+    let imported = 0;
+    let skipped = 0;
+    const errors = [];
+
+    for (const email of validEmails) {
+      try {
+        // Check if already exists
+        const existing = await queryOne(`
+          SELECT id FROM email_subscribers WHERE email = $1 AND region_id = $2
+        `, [email, regionData.id]);
+
+        if (existing) {
+          skipped++;
+          continue;
+        }
+
+        // Generate unsubscribe token
+        const unsubscribeToken = nanoid(32);
+
+        // Insert subscriber (pre-verified since admin is importing)
+        await query(`
+          INSERT INTO email_subscribers (email, region_id, all_routes, unsubscribe_token, verified_at)
+          VALUES ($1, $2, true, $3, NOW())
+        `, [email, regionData.id, unsubscribeToken]);
+
+        imported++;
+      } catch (err) {
+        errors.push({ email, error: err.message });
+      }
+    }
+
+    console.log(`📥 Imported ${imported} subscribers, skipped ${skipped} duplicates`);
+
+    res.json({
+      success: true,
+      imported,
+      skipped,
+      total: validEmails.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (error) {
+    console.error('Error importing subscribers:', error);
+    res.status(500).json({
+      error: 'Failed to import subscribers',
+      message: error.message
+    });
+  }
+});
+
 // Helper function to generate session token (cryptographically secure)
 function generateToken() {
   return nanoid(32);

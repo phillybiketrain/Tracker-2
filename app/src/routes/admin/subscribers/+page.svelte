@@ -12,6 +12,10 @@
   let pagination = { total: 0, pages: 1 };
   let deletingId = null;
   let searchTimeout = null;
+  let showImportModal = false;
+  let importText = '';
+  let importing = false;
+  let importResult = null;
 
   onMount(() => {
     token = localStorage.getItem('admin_token');
@@ -128,6 +132,60 @@
 
     URL.revokeObjectURL(url);
   }
+
+  function parseEmails(text) {
+    // Split by newlines, commas, semicolons, or spaces
+    return text
+      .split(/[\n,;\s]+/)
+      .map(e => e.trim())
+      .filter(e => e.length > 0);
+  }
+
+  async function importSubscribers() {
+    const emails = parseEmails(importText);
+
+    if (emails.length === 0) {
+      alert('Please enter at least one email address');
+      return;
+    }
+
+    importing = true;
+    importResult = null;
+
+    try {
+      const res = await fetch(`${API_URL}/admin/subscribers/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ region, emails })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Import failed');
+      }
+
+      importResult = data;
+
+      // Refresh the list
+      await loadSubscribers();
+
+    } catch (err) {
+      alert('Import failed: ' + err.message);
+      console.error(err);
+    } finally {
+      importing = false;
+    }
+  }
+
+  function closeImportModal() {
+    showImportModal = false;
+    importText = '';
+    importResult = null;
+  }
 </script>
 
 <svelte:head>
@@ -153,6 +211,12 @@
           <a href="/admin/newsletter" class="text-sm text-warm-gray-600 hover:text-warm-gray-900">
             Newsletter
           </a>
+          <button
+            on:click={() => showImportModal = true}
+            class="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-primary/90"
+          >
+            Import
+          </button>
           <button
             on:click={exportCSV}
             class="px-4 py-2 text-sm bg-warm-gray-100 text-warm-gray-700 rounded hover:bg-warm-gray-200"
@@ -274,3 +338,63 @@
     </div>
   </div>
 </div>
+
+<!-- Import Modal -->
+{#if showImportModal}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+      <h3 class="text-lg font-bold text-warm-gray-900 mb-4">Import Subscribers</h3>
+
+      {#if importResult}
+        <!-- Results -->
+        <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div class="text-green-800 font-medium mb-2">Import Complete</div>
+          <div class="text-sm text-green-700 space-y-1">
+            <div>{importResult.imported} imported</div>
+            <div>{importResult.skipped} skipped (already subscribed)</div>
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button
+            on:click={closeImportModal}
+            class="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-primary/90"
+          >
+            Done
+          </button>
+        </div>
+      {:else}
+        <!-- Input -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-warm-gray-700 mb-2">
+            Email Addresses
+          </label>
+          <textarea
+            bind:value={importText}
+            placeholder="Paste email addresses here (one per line, or comma/space separated)"
+            rows="8"
+            class="w-full px-3 py-2 border border-warm-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm font-mono"
+          ></textarea>
+          <p class="text-xs text-warm-gray-500 mt-2">
+            Imported subscribers will be marked as verified and subscribed to all routes.
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button
+            on:click={closeImportModal}
+            class="px-4 py-2 text-sm text-warm-gray-700 hover:bg-warm-gray-100 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            on:click={importSubscribers}
+            disabled={importing || !importText.trim()}
+            class="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
+          >
+            {importing ? 'Importing...' : 'Import'}
+          </button>
+        </div>
+      {/if}
+    </div>
+  </div>
+{/if}
