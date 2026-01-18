@@ -372,23 +372,61 @@ function renderFooter(unsubscribeUrl = '#') {
 
 /**
  * Format text with markdown-lite syntax
- * Supports: **bold**, *italic*, [text](url)
+ * Supports: **bold**, *italic*, [text](url), bullet points, line breaks
  */
 function formatText(text) {
   if (!text) return '';
 
-  let formatted = escapeHtml(text);
+  // Split into lines first to handle bullets and line breaks
+  const lines = text.split('\n');
+  const formattedLines = [];
+  let inBulletList = false;
 
-  // Bold: **text**
-  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  for (let i = 0; i < lines.length; i++) {
+    let line = escapeHtml(lines[i]);
 
-  // Italic: *text*
-  formatted = formatted.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Apply inline formatting
+    // Bold: **text**
+    line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic: *text* (but not if it's part of bold **)
+    line = line.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    // Links: [text](url)
+    line = line.replace(/\[(.+?)\]\((.+?)\)/g, `<a href="$2" style="color: ${COLORS.primary};">$1</a>`);
 
-  // Links: [text](url)
-  formatted = formatted.replace(/\[(.+?)\]\((.+?)\)/g, `<a href="$2" style="color: ${COLORS.primary};">$1</a>`);
+    // Check if this is a bullet point line
+    const bulletMatch = line.match(/^[•\-]\s+(.+)$/);
+    if (bulletMatch) {
+      if (!inBulletList) {
+        formattedLines.push('<ul style="margin: 10px 0; padding-left: 20px; list-style-type: disc;">');
+        inBulletList = true;
+      }
+      formattedLines.push(`<li style="margin: 5px 0;">${bulletMatch[1]}</li>`);
+    } else {
+      // Close bullet list if we were in one
+      if (inBulletList) {
+        formattedLines.push('</ul>');
+        inBulletList = false;
+      }
 
-  return formatted;
+      // Handle empty lines as paragraph breaks, non-empty as line breaks
+      if (line.trim() === '') {
+        formattedLines.push('<br><br>');
+      } else {
+        // Add line break before this line if it's not the first
+        if (formattedLines.length > 0 && !formattedLines[formattedLines.length - 1].endsWith('<br><br>') && !formattedLines[formattedLines.length - 1].endsWith('</ul>')) {
+          formattedLines.push('<br>');
+        }
+        formattedLines.push(line);
+      }
+    }
+  }
+
+  // Close bullet list if still open
+  if (inBulletList) {
+    formattedLines.push('</ul>');
+  }
+
+  return formattedLines.join('');
 }
 
 /**
@@ -467,5 +505,6 @@ function stripMarkdown(text) {
   return text
     .replace(/\*\*(.+?)\*\*/g, '$1')     // Remove bold
     .replace(/\*(.+?)\*/g, '$1')          // Remove italic
-    .replace(/\[(.+?)\]\((.+?)\)/g, '$1 ($2)'); // Convert links
+    .replace(/\[(.+?)\]\((.+?)\)/g, '$1 ($2)') // Convert links
+    .replace(/^[•]\s+/gm, '  - ');       // Convert bullet points to plain text format
 }
