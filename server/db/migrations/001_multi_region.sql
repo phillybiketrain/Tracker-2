@@ -57,27 +57,37 @@ CREATE INDEX IF NOT EXISTS idx_ride_instances_region ON ride_instances(region_id
 -- ============================================
 -- ENHANCED EMAIL_SUBSCRIBERS
 -- Support route/tag preferences per region
+-- Only recreate if old schema (no region_id column) exists
 -- ============================================
-DROP TABLE IF EXISTS email_subscribers CASCADE;
+DO $$
+BEGIN
+  -- Check if email_subscribers has region_id column (new schema)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'email_subscribers' AND column_name = 'region_id'
+  ) THEN
+    -- Old schema exists, drop and recreate
+    DROP TABLE IF EXISTS email_subscribers CASCADE;
 
-CREATE TABLE email_subscribers (
-  id                SERIAL PRIMARY KEY,
-  email             TEXT NOT NULL,
-  region_id         INTEGER NOT NULL REFERENCES regions(id),
+    CREATE TABLE email_subscribers (
+      id                SERIAL PRIMARY KEY,
+      email             TEXT NOT NULL,
+      region_id         INTEGER NOT NULL REFERENCES regions(id),
+      all_routes        BOOLEAN DEFAULT false,
+      route_ids         UUID[] DEFAULT '{}',
+      tags              TEXT[] DEFAULT '{}',
+      unsubscribe_token TEXT UNIQUE NOT NULL,
+      verified_at       TIMESTAMPTZ,
+      subscribed_at     TIMESTAMPTZ DEFAULT NOW(),
+      last_email_sent   TIMESTAMPTZ,
+      UNIQUE(email, region_id)
+    );
 
-  -- Subscription preferences
-  all_routes        BOOLEAN DEFAULT false,      -- Subscribe to all routes in region
-  route_ids         UUID[] DEFAULT '{}',        -- Specific routes
-  tags              TEXT[] DEFAULT '{}',        -- community, regular, special
-
-  -- Metadata
-  unsubscribe_token TEXT UNIQUE NOT NULL,
-  verified_at       TIMESTAMPTZ,                -- Set when confirmation email sent (no click required)
-  subscribed_at     TIMESTAMPTZ DEFAULT NOW(),
-  last_email_sent   TIMESTAMPTZ,
-
-  UNIQUE(email, region_id)
-);
+    RAISE NOTICE 'Created new email_subscribers table with region support';
+  ELSE
+    RAISE NOTICE 'email_subscribers already has region_id column, skipping recreation';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_email_subscribers_region ON email_subscribers(region_id);
 

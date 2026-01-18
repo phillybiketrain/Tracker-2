@@ -81,15 +81,11 @@ CREATE TABLE IF NOT EXISTS ride_interest (
 );
 
 -- ============================================
--- EMAIL_SUBSCRIBERS (Weekly digests)
+-- EMAIL_SUBSCRIBERS
+-- NOTE: This table is now created by 001_multi_region.sql
+-- with region support. Keeping this as a placeholder only.
 -- ============================================
-CREATE TABLE IF NOT EXISTS email_subscribers (
-  email              TEXT PRIMARY KEY,
-  frequency          TEXT DEFAULT 'weekly',
-  unsubscribe_token  TEXT UNIQUE NOT NULL,
-  subscribed_at      TIMESTAMPTZ DEFAULT NOW(),
-  last_email_sent    TIMESTAMPTZ
-);
+-- email_subscribers table created in migrations/001_multi_region.sql
 
 -- ============================================
 -- ROUTE_SUGGESTIONS (Demand heatmap)
