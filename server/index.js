@@ -17,9 +17,6 @@ import adminRouter, { requireAdmin, activeSessions } from './routes/admin.js';
 import subscriptionsRouter from './routes/subscriptions.js';
 import newslettersRouter from './routes/newsletters.js';
 
-// Import scheduler
-import { startWeeklyDigestScheduler } from './services/scheduler.js';
-
 // Import database client
 import { query, queryOne, queryAll, getPoolStats } from './db/client.js';
 
@@ -466,9 +463,6 @@ httpServer.listen(PORT, () => {
   console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   console.log('\n✅ Server ready!\n');
-
-  // Start weekly digest scheduler
-  startWeeklyDigestScheduler();
 });
 
 // Graceful shutdown

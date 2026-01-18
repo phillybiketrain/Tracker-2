@@ -51,7 +51,8 @@
       "Bash(dir:*)",
       "Bash(railway link:*)",
       "Bash(railway variables:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []
