@@ -14,6 +14,7 @@
   let socket = null;
   let mapComponent;
   let pollInterval = null;
+  let hoveredRide = null;
 
   // Transform rides for multi-ride map mode
   $: ridesForMap = liveRides.map(ride => ({
@@ -201,6 +202,7 @@
             <Map
               bind:this={mapComponent}
               rides={ridesForMap}
+              highlightedRide={hoveredRide}
             />
           </div>
           <div class="flex items-center justify-between mt-3">
@@ -223,7 +225,12 @@
         <!-- Ride List Below Map -->
         <div class="grid md:grid-cols-3 gap-4">
           {#each liveRides as ride (ride.id)}
-            <a href="/ride/{ride.id}" class="card hover:shadow-md transition-all p-0 overflow-hidden block">
+            <a
+              href="/ride/{ride.id}"
+              class="card hover:shadow-md transition-all p-0 overflow-hidden block {hoveredRide === ride.access_code ? 'ring-2 ring-primary shadow-lg' : ''}"
+              on:mouseenter={() => hoveredRide = ride.access_code}
+              on:mouseleave={() => hoveredRide = null}
+            >
               {#if ride.waypoints && ride.waypoints.length > 0}
                 <div class="h-24 w-full overflow-hidden relative">
                   <RoutePreview waypoints={ride.waypoints} previewImageUrl={ride.preview_image_url} />

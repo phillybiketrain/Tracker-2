@@ -20,6 +20,9 @@
   // Multi-ride mode: array of {accessCode, waypoints, leaderLocation, locationTrail, routeName}
   export let rides = [];
 
+  // Highlighted ride (for hover effects in multi-ride mode)
+  export let highlightedRide = null;
+
   // Colors for multi-ride mode
   const RIDE_COLORS = [
     '#E85D04', // Orange
@@ -507,6 +510,36 @@
     if (multiRideMarkers[accessCode]) {
       multiRideMarkers[accessCode].setLngLat([location.lng, location.lat]);
     }
+  }
+
+  // Highlight a specific ride's route (for hover effects)
+  $: if (map && map.loaded() && rides.length > 0) {
+    rides.forEach((ride, index) => {
+      const routeId = `route-${ride.accessCode}`;
+      const trailId = `trail-${ride.accessCode}`;
+      const isHighlighted = highlightedRide === ride.accessCode;
+      const hasHighlight = highlightedRide !== null;
+
+      // Update route layer opacity and width
+      if (map.getLayer(routeId)) {
+        map.setPaintProperty(routeId, 'line-opacity', hasHighlight ? (isHighlighted ? 0.9 : 0.15) : 0.4);
+        map.setPaintProperty(routeId, 'line-width', isHighlighted ? 5 : 3);
+      }
+
+      // Update trail layer opacity and width
+      if (map.getLayer(trailId)) {
+        map.setPaintProperty(trailId, 'line-opacity', hasHighlight ? (isHighlighted ? 1 : 0.2) : 0.9);
+        map.setPaintProperty(trailId, 'line-width', isHighlighted ? 6 : 4);
+      }
+
+      // Update leader marker opacity
+      if (multiRideMarkers[ride.accessCode]) {
+        const el = multiRideMarkers[ride.accessCode].getElement();
+        el.style.opacity = hasHighlight ? (isHighlighted ? '1' : '0.3') : '1';
+        el.style.transform = isHighlighted ? 'scale(1.3)' : 'scale(1)';
+        el.style.transition = 'opacity 0.2s, transform 0.2s';
+      }
+    });
   }
 
   // Fit bounds to show all rides
