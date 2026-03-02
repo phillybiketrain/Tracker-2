@@ -161,7 +161,7 @@
 <div class="bg-amber-50 border-y border-amber-200">
   <div class="container mx-auto px-6 py-4 flex items-center justify-center gap-3 flex-wrap text-center">
     <span class="text-gray-600 text-sm">☕ This month's coffee sponsored by</span>
-    <a href="https://phillybike.expo" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+    <a href="https://phillybikeexpo.com/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
       <img src="/pbe_logo.png" alt="Philly Bike Expo" class="h-8 w-auto" />
       <span class="font-semibold text-gray-800">Philly Bike Expo</span>
     </a>
