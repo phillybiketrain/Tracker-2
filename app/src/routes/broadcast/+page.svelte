@@ -2,7 +2,6 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import Map from '$lib/components/Map.svelte';
-  import Markdown from '$lib/components/Markdown.svelte';
   import { io } from 'socket.io-client';
   import { API_URL, SOCKET_URL } from '$lib/config.js';
 
@@ -10,34 +9,99 @@
   let route = null;
   let loading = true;
   let broadcasting = false;
-  let connecting = false; // New: track connection attempt
-  let connectionError = null; // New: track errors
+  let connecting = false;
+  let connectionError = null;
   let followerCount = 0;
   let currentLocation = null;
-  let locationTrail = []; // Track leader's path over time
+  let locationTrail = [];
   let socket = null;
   let watchId = null;
-  let wakeLock = null; // Keep screen on during broadcast
-  let startTimeout = null; // New: timeout for start attempt
+  let wakeLock = null;
+  let startTimeout = null;
+
+  // 4-box code entry state
+  let codeChars = ['', '', '', ''];
+  let codeInputRefs = [null, null, null, null];
+
+  function handleCodeInput(i, e) {
+    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    codeChars[i] = val ? val[val.length - 1] : '';
+    codeChars = [...codeChars];
+
+    if (val && i < 3) {
+      codeInputRefs[i + 1]?.focus();
+    }
+
+    if (codeChars.every(c => c)) {
+      accessCode = codeChars.join('');
+      loadRoute();
+    }
+  }
+
+  function handleCodeKeydown(i, e) {
+    if (e.key === 'Backspace' && !codeChars[i] && i > 0) {
+      codeChars[i - 1] = '';
+      codeChars = [...codeChars];
+      codeInputRefs[i - 1]?.focus();
+    }
+  }
+
+  function handleCodePaste(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData)
+      .getData('text')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 4);
+
+    for (let i = 0; i < 4; i++) {
+      codeChars[i] = text[i] || '';
+    }
+    codeChars = [...codeChars];
+
+    if (text.length >= 4) {
+      accessCode = text.slice(0, 4);
+      loadRoute();
+    } else {
+      codeInputRefs[Math.min(text.length, 3)]?.focus();
+    }
+  }
+
+  function resetCode() {
+    codeChars = ['', '', '', ''];
+    codeChars = [...codeChars];
+    accessCode = '';
+    route = null;
+    loading = false;
+    connectionError = null;
+    setTimeout(() => codeInputRefs[0]?.focus(), 50);
+  }
 
   async function loadRoute() {
     loading = true;
+    connectionError = null;
 
     try {
       const res = await fetch(`${API_URL}/routes/${accessCode}`);
       const data = await res.json();
 
       if (!data.success) {
-        alert('Route not found. Check your access code.');
-        accessCode = '';
+        connectionError = 'Route not found. Check your code.';
+        codeChars = ['', '', '', ''];
+        codeChars = [...codeChars];
         route = null;
+        loading = false;
+        setTimeout(() => codeInputRefs[0]?.focus(), 50);
         return;
       }
 
       route = data.data;
+      // Persist code so next visit auto-loads
+      localStorage.setItem('my_route_code', accessCode);
 
     } catch (err) {
-      alert('Failed to load route');
+      connectionError = 'Failed to load route. Check your connection.';
+      route = null;
       console.error(err);
     } finally {
       loading = false;
@@ -46,21 +110,16 @@
 
   async function startBroadcasting() {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      connectionError = 'Location services are not available on this device.';
       return;
     }
 
-    // Reset state
     connecting = true;
     connectionError = null;
 
-    // Request screen wake lock to keep screen on
     try {
       if ('wakeLock' in navigator) {
         wakeLock = await navigator.wakeLock.request('screen');
-        console.log('Screen wake lock activated');
-
-        // Re-request wake lock if visibility changes (screen comes back)
         document.addEventListener('visibilitychange', async () => {
           if (document.visibilityState === 'visible' && broadcasting && !wakeLock) {
             try {
@@ -75,11 +134,10 @@
       console.warn('Wake lock not supported or failed:', err);
     }
 
-    // Set timeout for connection attempt (15 seconds)
     startTimeout = setTimeout(() => {
       if (connecting && !broadcasting) {
         connecting = false;
-        connectionError = 'Connection timed out. Please check your internet and try again.';
+        connectionError = 'Connection timed out. Check your internet and try again.';
         if (socket) {
           socket.disconnect();
           socket = null;
@@ -87,7 +145,6 @@
       }
     }, 15000);
 
-    // Connect to WebSocket
     socket = io(SOCKET_URL, {
       timeout: 10000,
       reconnection: true,
@@ -96,7 +153,6 @@
     });
 
     socket.on('connect', () => {
-      console.log('Connected to server');
       socket.emit('ride:start', { accessCode });
     });
 
@@ -104,11 +160,10 @@
       console.error('Connection error:', error);
       clearTimeout(startTimeout);
       connecting = false;
-      connectionError = 'Failed to connect to server. Please try again.';
+      connectionError = 'Failed to connect. Please try again.';
     });
 
     socket.on('ride:error', (data) => {
-      console.error('Ride error:', data.message);
       clearTimeout(startTimeout);
       connecting = false;
       connectionError = data.message || 'Failed to start ride. Please try again.';
@@ -117,145 +172,91 @@
     });
 
     socket.on('ride:started', () => {
-      console.log('Ride started successfully');
       clearTimeout(startTimeout);
       connecting = false;
       broadcasting = true;
 
-      // Start watching position
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude, accuracy } = position.coords;
-
-          // Update current location for map centering
           currentLocation = { lat: latitude, lng: longitude };
-
-          // Add to location trail
-          locationTrail = [...locationTrail, {
-            lat: latitude,
-            lng: longitude,
-            timestamp: Date.now()
-          }];
+          locationTrail = [...locationTrail, { lat: latitude, lng: longitude, timestamp: Date.now() }];
 
           if (socket && socket.connected) {
-            socket.emit('location:update', {
-              accessCode,
-              lat: latitude,
-              lng: longitude,
-              accuracy
-            });
+            socket.emit('location:update', { accessCode, lat: latitude, lng: longitude, accuracy });
           }
         },
         (error) => {
           console.error('Geolocation error:', error);
-          alert('Error getting location. Make sure location services are enabled.');
+          connectionError = 'Location error. Make sure location services are enabled.';
         },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-          timeout: 10000
-        }
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
     });
 
-    socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
+    socket.on('disconnect', () => {
       if (broadcasting) {
-        // Don't clear broadcasting state - let user know we're trying to reconnect
-        connectionError = 'Connection lost. Attempting to reconnect...';
+        connectionError = 'Connection lost. Reconnecting...';
       }
     });
 
     socket.on('reconnect', () => {
-      console.log('Reconnected to server');
       connectionError = null;
-      // Re-emit ride start to rejoin the room
       socket.emit('ride:start', { accessCode });
     });
 
-    socket.on('follower:joined', (data) => {
-      followerCount = data.followerCount;
-    });
-
-    socket.on('follower:left', (data) => {
-      followerCount = data.followerCount;
-    });
+    socket.on('follower:joined', (data) => { followerCount = data.followerCount; });
+    socket.on('follower:left', (data) => { followerCount = data.followerCount; });
   }
 
   async function stopBroadcasting() {
-    if (!confirm('End this ride? All followers will be disconnected.')) {
-      return;
-    }
-
+    if (!confirm('End this ride? All followers will be disconnected.')) return;
     await endBroadcast();
     goto('/manage?code=' + accessCode);
   }
 
-  // Centralized cleanup function
   async function endBroadcast() {
-    if (startTimeout) {
-      clearTimeout(startTimeout);
-      startTimeout = null;
-    }
-
-    if (watchId) {
-      navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-    }
-
+    if (startTimeout) { clearTimeout(startTimeout); startTimeout = null; }
+    if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
     if (socket) {
-      // Emit ride:end before disconnecting
       if (broadcasting) {
         socket.emit('ride:end', { accessCode });
-        // Give it a moment to send
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       socket.disconnect();
       socket = null;
     }
-
-    // Release wake lock
     if (wakeLock) {
-      try {
-        await wakeLock.release();
-        wakeLock = null;
-        console.log('Screen wake lock released');
-      } catch (e) {
-        console.warn('Failed to release wake lock:', e);
-      }
+      try { await wakeLock.release(); wakeLock = null; } catch (e) {}
     }
-
     broadcasting = false;
     connecting = false;
   }
 
-  // Handle browser close/navigation - try to end ride gracefully
-  function handleBeforeUnload(event) {
-    if (broadcasting && socket) {
-      // Send ride:end synchronously before page unloads
-      socket.emit('ride:end', { accessCode });
-    }
+  function handleBeforeUnload() {
+    if (broadcasting && socket) socket.emit('ride:end', { accessCode });
   }
 
   onMount(() => {
-    // Check for access code in URL or localStorage
     const params = new URLSearchParams(window.location.search);
     const urlCode = params.get('code');
 
     if (urlCode) {
-      accessCode = urlCode;
+      accessCode = urlCode.toUpperCase().slice(0, 4);
+      codeChars = accessCode.split('').concat(['', '', '', '']).slice(0, 4);
       loadRoute();
     } else {
       const savedCode = localStorage.getItem('my_route_code');
       if (savedCode) {
         accessCode = savedCode;
+        codeChars = savedCode.split('').concat(['', '', '', '']).slice(0, 4);
         loadRoute();
       } else {
         loading = false;
+        setTimeout(() => codeInputRefs[0]?.focus(), 100);
       }
     }
 
-    // Add beforeunload handler
     window.addEventListener('beforeunload', handleBeforeUnload);
   });
 
@@ -266,168 +267,137 @@
 </script>
 
 <svelte:head>
-  <title>Broadcast Ride - Philly Bike Train</title>
+  <title>Lead a Ride - Philly Bike Train</title>
 </svelte:head>
 
-<div class="min-h-screen bg-warm-gray-50">
-  <div class="container mx-auto px-6 py-8">
+{#if loading}
+  <!-- Loading -->
+  <div class="min-h-screen flex items-center justify-center bg-warm-gray-50">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-warm-gray-600">Loading your route...</p>
+    </div>
+  </div>
 
-    {#if loading}
-      <div class="text-center py-16">
-        <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-warm-gray-600 text-lg">Loading route...</p>
+{:else if !route}
+  <!-- Code Entry -->
+  <div class="min-h-screen flex items-center justify-center bg-warm-gray-50">
+    <div class="w-full max-w-sm mx-auto px-6">
+      <div class="text-center mb-10">
+        <h1 class="text-3xl font-bold text-warm-gray-900 mb-2">Lead a Ride</h1>
+        <p class="text-warm-gray-500">Enter your 4-character route code</p>
       </div>
 
-    {:else if !route}
-      <!-- Access Code Entry -->
-      <div class="max-w-md mx-auto">
-        <div class="card">
-          <h1 class="text-2xl font-bold text-warm-gray-900 mb-2">
-            Start Broadcasting
-          </h1>
-          <p class="text-warm-gray-600 mb-6">
-            Enter your route access code to start a live ride
-          </p>
-
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-warm-gray-900 mb-2">
-              Access Code
-            </label>
-            <input
-              type="text"
-              bind:value={accessCode}
-              on:keypress={(e) => e.key === 'Enter' && loadRoute()}
-              class="w-full px-4 py-3 border border-warm-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="e.g., ABC123XYZ"
-            />
-          </div>
-
-          <button
-            on:click={loadRoute}
-            disabled={!accessCode}
-            class="w-full btn btn-primary py-3"
-          >
-            Load Route
-          </button>
-
-          <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-            <strong>Don't have a route yet?</strong>
-            <a href="/create" class="text-primary hover:underline ml-1">Create one here</a>
-          </div>
+      {#if connectionError}
+        <div class="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 text-center">
+          {connectionError}
         </div>
-      </div>
+      {/if}
 
-    {:else if !broadcasting}
-      <!-- Pre-Broadcast Screen -->
-      <div class="max-w-4xl mx-auto">
-        <div class="card mb-6">
-          <h1 class="text-3xl font-bold text-warm-gray-900 mb-2">{route.name}</h1>
-          {#if route.description}
-            <Markdown content={route.description} className="text-warm-gray-600 mb-4" />
-          {/if}
-
-          <div class="flex gap-6 text-sm text-warm-gray-600 mb-6">
-            <div>
-              <span class="font-medium">Departs:</span> {route.departure_time}
-            </div>
-            {#if route.estimated_duration}
-              <div>
-                <span class="font-medium">Duration:</span> ~{route.estimated_duration} min
-              </div>
-            {/if}
-          </div>
-
-          <div class="h-64 rounded-lg overflow-hidden mb-6">
-            <Map waypoints={route.waypoints || []} showMarkers={false} />
-          </div>
-
-          <div class="p-4 bg-yellow-50 border border-yellow-200 rounded mb-6">
-            <h3 class="font-semibold text-yellow-900 mb-2">Before you start:</h3>
-            <ul class="text-sm text-yellow-800 space-y-1">
-              <li>• Make sure your location services are enabled</li>
-              <li>• Keep this page open during your entire ride</li>
-              <li>• Your location will be shared with all followers</li>
-              <li>• Click "End Ride" when you reach your destination</li>
-            </ul>
-          </div>
-
-          {#if connectionError}
-            <div class="p-4 bg-red-50 border border-red-200 rounded mb-6">
-              <p class="text-sm text-red-800">{connectionError}</p>
-            </div>
-          {/if}
-
-          <div class="flex gap-3">
-            <button
-              on:click={startBroadcasting}
-              disabled={connecting}
-              class="btn btn-primary py-4 text-lg flex-[3] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {#if connecting}
-                <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Connecting...
-              {:else}
-                Start Broadcasting
-              {/if}
-            </button>
-
-            <a
-              href="/manage?code={accessCode}"
-              class="btn btn-secondary py-4 flex-1 flex items-center justify-center {connecting ? 'pointer-events-none opacity-50' : ''}"
-            >
-              Back
-            </a>
-          </div>
-        </div>
-      </div>
-
-    {:else}
-      <!-- Broadcasting Screen - Mobile Optimized -->
-      <div class="fixed inset-0 flex flex-col bg-warm-gray-50">
-        <!-- Compact Header -->
-        <div class="flex items-center justify-between px-4 py-2 bg-white border-b border-warm-gray-200">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <h1 class="text-[1.125rem] font-bold text-warm-gray-900">Broadcasting Live</h1>
-          </div>
-          <button on:click={stopBroadcasting} class="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
-            End Ride
-          </button>
-        </div>
-
-        <!-- Connection Warning Banner -->
-        {#if connectionError}
-          <div class="px-4 py-2 bg-yellow-500 text-yellow-900 text-sm font-medium flex items-center gap-2">
-            <div class="w-4 h-4 border-2 border-yellow-900 border-t-transparent rounded-full animate-spin"></div>
-            {connectionError}
-          </div>
-        {/if}
-
-        <!-- Compact Info Bar -->
-        <div class="px-4 py-2 bg-white border-b border-warm-gray-200">
-          <div class="flex items-center justify-between text-sm">
-            <span class="font-medium text-warm-gray-900">{route.name}</span>
-            <div class="flex items-center gap-4 text-warm-gray-600">
-              <span>{followerCount} follower{followerCount !== 1 ? 's' : ''}</span>
-              {#if route.estimated_duration}
-                <span>~{route.estimated_duration}</span>
-              {/if}
-            </div>
-          </div>
-        </div>
-
-        <!-- Full Screen Map -->
-        <div class="flex-1 relative">
-          <Map
-            waypoints={route.waypoints || []}
-            leaderLocation={currentLocation}
-            locationTrail={locationTrail}
-            autoCenter={true}
-            showMarkers={false}
+      <div class="flex gap-3 justify-center mb-10" on:paste={handleCodePaste}>
+        {#each [0, 1, 2, 3] as i}
+          <input
+            bind:this={codeInputRefs[i]}
+            type="text"
+            maxlength="2"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            value={codeChars[i]}
+            on:input={(e) => handleCodeInput(i, e)}
+            on:keydown={(e) => handleCodeKeydown(i, e)}
+            class="w-16 h-20 text-center text-3xl font-mono font-bold uppercase border-2 rounded-xl focus:outline-none transition-colors {codeChars[i] ? 'border-primary bg-primary/5 text-primary' : 'border-warm-gray-300 bg-white text-warm-gray-900'} focus:border-primary"
           />
+        {/each}
+      </div>
+
+      <p class="text-center text-sm text-warm-gray-500">
+        Don't have a route yet?
+        <a href="/create" class="text-primary hover:underline">Create one here</a>
+      </p>
+    </div>
+  </div>
+
+{:else if !broadcasting}
+  <!-- Pre-broadcast: route confirmed, one tap to go live -->
+  <div class="min-h-screen flex items-center justify-center bg-warm-gray-50">
+    <div class="w-full max-w-sm mx-auto px-6">
+      <div class="text-center mb-10">
+        <div class="w-3 h-3 bg-green-500 rounded-full mx-auto mb-5 animate-pulse"></div>
+        <h1 class="text-4xl font-bold text-warm-gray-900 mb-3 leading-tight">{route.name}</h1>
+        {#if route.departure_time}
+          <p class="text-warm-gray-500 text-lg">Departs {route.departure_time}</p>
+        {/if}
+      </div>
+
+      {#if connectionError}
+        <div class="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 text-center">
+          {connectionError}
         </div>
+      {/if}
+
+      <button
+        on:click={startBroadcasting}
+        disabled={connecting}
+        class="w-full py-6 text-2xl font-bold text-white bg-green-500 hover:bg-green-600 active:bg-green-700 rounded-2xl transition-colors disabled:opacity-70 flex items-center justify-center gap-3 shadow-lg"
+      >
+        {#if connecting}
+          <div class="w-6 h-6 border-[3px] border-white border-t-transparent rounded-full animate-spin"></div>
+          Connecting...
+        {:else}
+          Go Live
+        {/if}
+      </button>
+
+      <p class="text-center mt-8 text-sm text-warm-gray-400">
+        <button on:click={resetCode} class="hover:text-warm-gray-700 underline underline-offset-2">
+          Wrong route? Change code
+        </button>
+      </p>
+    </div>
+  </div>
+
+{:else}
+  <!-- Broadcasting Screen — mobile optimized, full screen -->
+  <div class="fixed inset-0 flex flex-col bg-warm-gray-50">
+    <div class="flex items-center justify-between px-4 py-2 bg-white border-b border-warm-gray-200">
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <h1 class="text-[1.125rem] font-bold text-warm-gray-900">Broadcasting Live</h1>
+      </div>
+      <button on:click={stopBroadcasting} class="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700 active:bg-red-800">
+        End Ride
+      </button>
+    </div>
+
+    {#if connectionError}
+      <div class="px-4 py-2 bg-yellow-500 text-yellow-900 text-sm font-medium flex items-center gap-2">
+        <div class="w-4 h-4 border-2 border-yellow-900 border-t-transparent rounded-full animate-spin"></div>
+        {connectionError}
       </div>
     {/if}
 
+    <div class="px-4 py-2 bg-white border-b border-warm-gray-200">
+      <div class="flex items-center justify-between text-sm">
+        <span class="font-medium text-warm-gray-900">{route.name}</span>
+        <div class="flex items-center gap-4 text-warm-gray-600">
+          <span>{followerCount} follower{followerCount !== 1 ? 's' : ''}</span>
+          {#if route.estimated_duration}
+            <span>~{route.estimated_duration}</span>
+          {/if}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 relative">
+      <Map
+        waypoints={route.waypoints || []}
+        leaderLocation={currentLocation}
+        locationTrail={locationTrail}
+        autoCenter={true}
+        showMarkers={false}
+      />
+    </div>
   </div>
-</div>
+{/if}
