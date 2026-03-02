@@ -41,24 +41,18 @@ router.get('/live', async (req, res) => {
         r.distance_miles,
         r.tag,
         r.preview_image_url,
-        r.start_location_icon_url,
-        COUNT(DISTINCT rf.session_id) as follower_count
+        r.start_location_icon_url
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
-      LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
       WHERE ri.status = 'live'
         AND ri.region_id = $1
-      GROUP BY ri.id, r.id
       ORDER BY ri.started_at DESC
     `, [regionData.id]);
 
     res.json({
       success: true,
       count: liveRides.length,
-      data: liveRides.map(ride => ({
-        ...ride,
-        follower_count: parseInt(ride.follower_count)
-      }))
+      data: liveRides
     });
 
   } catch (error) {
@@ -127,15 +121,10 @@ router.get('/', async (req, res) => {
         r.distance_miles,
         r.tag,
         r.preview_image_url,
-        r.start_location_icon_url,
-        COUNT(DISTINCT rf.session_id) as follower_count,
-        COUNT(DISTINCT rint.session_id) as interest_count
+        r.start_location_icon_url
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
-      LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
-      LEFT JOIN ride_interest rint ON ri.id = rint.ride_instance_id
       ${whereClause}
-      GROUP BY ri.id, r.id
       ORDER BY ri.date ASC, r.departure_time ASC
       LIMIT $3
     `, params);
@@ -143,11 +132,7 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       count: rides.length,
-      data: rides.map(ride => ({
-        ...ride,
-        follower_count: parseInt(ride.follower_count),
-        interest_count: parseInt(ride.interest_count)
-      }))
+      data: rides
     });
 
   } catch (error) {
@@ -177,15 +162,10 @@ router.get('/:id', async (req, res) => {
         r.departure_time,
         r.estimated_duration,
         r.distance_miles,
-        r.start_location_icon_url,
-        COUNT(DISTINCT rf.session_id) as follower_count,
-        COUNT(DISTINCT rint.session_id) as interest_count
+        r.start_location_icon_url
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
-      LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
-      LEFT JOIN ride_interest rint ON ri.id = rint.ride_instance_id
       WHERE ri.id = $1
-      GROUP BY ri.id, r.id
     `, [id]);
 
     if (!ride) {
@@ -196,18 +176,12 @@ router.get('/:id', async (req, res) => {
 
     // Get other ride instances for this route
     const otherRides = await queryAll(`
-      SELECT
-        ri.id,
-        ri.date,
-        ri.status,
-        COUNT(DISTINCT rint.session_id) as interest_count
+      SELECT ri.id, ri.date, ri.status
       FROM ride_instances ri
-      LEFT JOIN ride_interest rint ON ri.id = rint.ride_instance_id
       WHERE ri.route_id = $1
         AND ri.id != $2
         AND ri.date >= CURRENT_DATE
         AND ri.status IN ('scheduled', 'live')
-      GROUP BY ri.id
       ORDER BY ri.date ASC
       LIMIT 10
     `, [ride.route_id, id]);
@@ -217,13 +191,7 @@ router.get('/:id', async (req, res) => {
       data: {
         ...ride,
         current_location: ride.current_location || null,
-        location_trail: ride.location_trail || [],
-        follower_count: parseInt(ride.follower_count),
-        interest_count: parseInt(ride.interest_count),
-        other_rides: otherRides.map(r => ({
-          ...r,
-          interest_count: parseInt(r.interest_count)
-        }))
+        other_rides: otherRides
       }
     });
 
@@ -302,50 +270,6 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-/**
- * POST /api/rides/:id/interest
- * Express interest in a ride
- */
-router.post('/:id/interest', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { session_id } = req.body;
-
-    if (!session_id) {
-      return res.status(400).json({
-        error: 'session_id is required'
-      });
-    }
-
-    // Add interest (ignore if already exists)
-    await query(`
-      INSERT INTO ride_interest (ride_instance_id, session_id)
-      VALUES ($1, $2)
-      ON CONFLICT DO NOTHING
-    `, [id, session_id]);
-
-    // Get updated count
-    const result = await queryOne(`
-      SELECT COUNT(*) as count
-      FROM ride_interest
-      WHERE ride_instance_id = $1
-    `, [id]);
-
-    console.log(`👋 Interest added for ride ${id}`);
-
-    res.json({
-      success: true,
-      interest_count: parseInt(result.count)
-    });
-
-  } catch (error) {
-    console.error('Error adding interest:', error);
-    res.status(500).json({
-      error: 'Failed to add interest',
-      message: error.message
-    });
-  }
-});
 
 /**
  * GET /api/rides/by-code/:accessCode
@@ -365,15 +289,12 @@ router.get('/by-code/:accessCode', async (req, res) => {
         r.waypoints,
         r.departure_time,
         r.estimated_duration,
-        r.distance_miles,
-        COUNT(DISTINCT rf.session_id) as follower_count
+        r.distance_miles
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
-      LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
       WHERE r.access_code = $1
         AND ri.date = CURRENT_DATE
         AND ri.status IN ('scheduled', 'live')
-      GROUP BY ri.id, r.id
     `, [accessCode.toUpperCase()]);
 
     if (!ride) {
@@ -386,9 +307,7 @@ router.get('/by-code/:accessCode', async (req, res) => {
       success: true,
       data: {
         ...ride,
-        current_location: ride.current_location || null,
-        location_trail: ride.location_trail || [],
-        follower_count: parseInt(ride.follower_count)
+        current_location: ride.current_location || null
       }
     });
 

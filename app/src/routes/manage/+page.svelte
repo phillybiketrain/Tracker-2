@@ -564,9 +564,6 @@
                     </div>
                     <div class="text-sm text-warm-gray-600">
                       {ride.departure_time}
-                      {#if ride.interest_count > 0}
-                        • {ride.interest_count} interested
-                      {/if}
                     </div>
                   </div>
                   <div class="flex items-center gap-2">

@@ -128,13 +128,11 @@ io.on('connection', (socket) => {
       timestamp
     });
 
-    // Save location to database (current_location and append to location_trail)
+    // Persist current position only (no trail accumulation per ping)
     try {
       await query(`
         UPDATE ride_instances
-        SET
-          current_location = $2::jsonb,
-          location_trail = COALESCE(location_trail, '[]'::jsonb) || $3::jsonb
+        SET current_location = $2::jsonb
         WHERE id IN (
           SELECT ri.id
           FROM ride_instances ri
@@ -144,8 +142,7 @@ io.on('connection', (socket) => {
         )
       `, [
         accessCode,
-        JSON.stringify({ lat, lng, timestamp }),
-        JSON.stringify([{ lat, lng, timestamp }])
+        JSON.stringify({ lat, lng, timestamp })
       ]);
     } catch (error) {
       console.error(`❌ Failed to save location for ${accessCode}:`, error);
@@ -366,23 +363,12 @@ io.on('connection', (socket) => {
   });
 
   // Stop watching all rides
-  socket.on('watch:all:stop', async () => {
+  socket.on('watch:all:stop', () => {
     console.log(`🛑 Client stopped watching all: ${socket.id}`);
-
-    try {
-      const liveRides = await queryAll(`
-        SELECT r.access_code
-        FROM ride_instances ri
-        JOIN routes r ON ri.route_id = r.id
-        WHERE ri.status = 'live'
-      `);
-
-      liveRides.forEach(ride => {
-        socket.leave(ride.access_code);
-      });
-    } catch (error) {
-      console.error('❌ Failed to leave live ride rooms:', error);
-    }
+    // Leave every room except the socket's own room
+    socket.rooms.forEach(room => {
+      if (room !== socket.id) socket.leave(room);
+    });
   });
 
   // Disconnect handler

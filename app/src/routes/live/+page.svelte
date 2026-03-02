@@ -304,10 +304,6 @@
                     <span>•</span>
                     <span>{ride.distance_miles} mi</span>
                   {/if}
-                  {#if ride.follower_count > 0}
-                    <span>•</span>
-                    <span>{ride.follower_count} tracking</span>
-                  {/if}
                 </div>
 
                 <a

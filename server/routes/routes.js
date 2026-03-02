@@ -248,17 +248,11 @@ router.get('/:accessCode/next-ride', async (req, res) => {
 
     // Get next upcoming ride instance
     const nextRide = await queryOne(`
-      SELECT
-        ri.*,
-        COUNT(DISTINCT rf.session_id) as follower_count,
-        COUNT(DISTINCT rint.session_id) as interest_count
+      SELECT ri.*
       FROM ride_instances ri
-      LEFT JOIN ride_followers rf ON ri.id = rf.ride_instance_id
-      LEFT JOIN ride_interest rint ON ri.id = rint.ride_instance_id
       WHERE ri.route_id = $1
         AND ri.date >= CURRENT_DATE
         AND ri.status IN ('scheduled', 'live')
-      GROUP BY ri.id
       ORDER BY ri.date ASC, ri.created_at ASC
       LIMIT 1
     `, [route.id]);
@@ -286,8 +280,6 @@ router.get('/:accessCode/next-ride', async (req, res) => {
           id: nextRide.id,
           date: nextRide.date,
           status: nextRide.status,
-          follower_count: parseInt(nextRide.follower_count),
-          interest_count: parseInt(nextRide.interest_count),
           is_live: nextRide.status === 'live',
           current_location: nextRide.current_location || null
         }
