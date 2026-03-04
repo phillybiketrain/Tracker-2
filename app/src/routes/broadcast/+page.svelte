@@ -18,6 +18,11 @@
   let watchId = null;
   let wakeLock = null;
   let startTimeout = null;
+  let lastEmitTime = 0;
+  let visibilityHandler = null;
+
+  const GPS_EMIT_INTERVAL = 5000; // Throttle GPS emissions to once per 5s
+  const TRAIL_MAX_LENGTH = 500;   // Cap in-memory trail
 
   // 4-box code entry state
   let codeChars = ['', '', '', ''];
@@ -108,6 +113,55 @@
     }
   }
 
+  function onGpsPosition(position) {
+    const { latitude, longitude, accuracy } = position.coords;
+    currentLocation = { lat: latitude, lng: longitude };
+
+    // Cap in-memory trail length
+    if (locationTrail.length >= TRAIL_MAX_LENGTH) {
+      locationTrail = locationTrail.slice(-Math.floor(TRAIL_MAX_LENGTH * 0.75));
+    }
+    locationTrail = [...locationTrail, { lat: latitude, lng: longitude, timestamp: Date.now() }];
+
+    // Throttle socket emissions to save battery and reduce DB writes
+    const now = Date.now();
+    if (socket && socket.connected && (now - lastEmitTime) >= GPS_EMIT_INTERVAL) {
+      lastEmitTime = now;
+      socket.emit('location:update', { accessCode, lat: latitude, lng: longitude, accuracy });
+    }
+  }
+
+  function onGpsError(error) {
+    console.error('Geolocation error:', error);
+    connectionError = 'Location error. Make sure location services are enabled.';
+  }
+
+  function startGpsWatch() {
+    // Clear any existing watch before starting a new one
+    if (watchId != null) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+    watchId = navigator.geolocation.watchPosition(
+      onGpsPosition,
+      onGpsError,
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+    );
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState !== 'visible' || !broadcasting) return;
+
+    // Re-acquire wake lock (released when page goes hidden)
+    if ('wakeLock' in navigator && !wakeLock) {
+      navigator.wakeLock.request('screen')
+        .then(wl => { wakeLock = wl; })
+        .catch(() => {});
+    }
+
+    // Re-establish GPS watch (may have been killed by OS while backgrounded)
+    startGpsWatch();
+  }
+
   async function startBroadcasting() {
     if (!navigator.geolocation) {
       connectionError = 'Location services are not available on this device.';
@@ -120,19 +174,14 @@
     try {
       if ('wakeLock' in navigator) {
         wakeLock = await navigator.wakeLock.request('screen');
-        document.addEventListener('visibilitychange', async () => {
-          if (document.visibilityState === 'visible' && broadcasting && !wakeLock) {
-            try {
-              wakeLock = await navigator.wakeLock.request('screen');
-            } catch (e) {
-              console.warn('Failed to re-acquire wake lock:', e);
-            }
-          }
-        });
       }
     } catch (err) {
       console.warn('Wake lock not supported or failed:', err);
     }
+
+    // Register visibility handler (wake lock + GPS re-acquisition)
+    visibilityHandler = handleVisibilityChange;
+    document.addEventListener('visibilitychange', visibilityHandler);
 
     startTimeout = setTimeout(() => {
       if (connecting && !broadcasting) {
@@ -148,19 +197,25 @@
     socket = io(SOCKET_URL, {
       timeout: 10000,
       reconnection: true,
-      reconnectionAttempts: 3,
-      reconnectionDelay: 1000
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000
+      // reconnectionAttempts defaults to Infinity — leader should always retry
     });
 
     socket.on('connect', () => {
+      // Fires on both initial connect AND every reconnect
+      connectionError = null;
       socket.emit('ride:start', { accessCode });
     });
 
     socket.on('connect_error', (error) => {
       console.error('Connection error:', error);
-      clearTimeout(startTimeout);
-      connecting = false;
-      connectionError = 'Failed to connect. Please try again.';
+      // Only show fatal error during initial connect, not during reconnection
+      if (!broadcasting) {
+        clearTimeout(startTimeout);
+        connecting = false;
+        connectionError = 'Failed to connect. Please try again.';
+      }
     });
 
     socket.on('ride:error', (data) => {
@@ -175,34 +230,13 @@
       clearTimeout(startTimeout);
       connecting = false;
       broadcasting = true;
-
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude, accuracy } = position.coords;
-          currentLocation = { lat: latitude, lng: longitude };
-          locationTrail = [...locationTrail, { lat: latitude, lng: longitude, timestamp: Date.now() }];
-
-          if (socket && socket.connected) {
-            socket.emit('location:update', { accessCode, lat: latitude, lng: longitude, accuracy });
-          }
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          connectionError = 'Location error. Make sure location services are enabled.';
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-      );
+      startGpsWatch();
     });
 
     socket.on('disconnect', () => {
       if (broadcasting) {
         connectionError = 'Connection lost. Reconnecting...';
       }
-    });
-
-    socket.on('reconnect', () => {
-      connectionError = null;
-      socket.emit('ride:start', { accessCode });
     });
 
     socket.on('follower:joined', (data) => { followerCount = data.followerCount; });
@@ -217,7 +251,11 @@
 
   async function endBroadcast() {
     if (startTimeout) { clearTimeout(startTimeout); startTimeout = null; }
-    if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (watchId != null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler);
+      visibilityHandler = null;
+    }
     if (socket) {
       if (broadcasting) {
         socket.emit('ride:end', { accessCode });

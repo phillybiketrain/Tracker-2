@@ -53,6 +53,11 @@ const io = new SocketIO(httpServer, {
 // Map: accessCode -> { socketId, startedAt }
 const activeLeaders = new Map();
 
+// Throttle DB writes per leader (broadcast every update, persist every 5s)
+// Map: accessCode -> timestamp of last DB write
+const lastDbWrite = new Map();
+const DB_WRITE_INTERVAL = 5000;
+
 // Middleware
 app.use(cors({
   origin: allowedOrigins,
@@ -114,21 +119,18 @@ io.on('connection', (socket) => {
   // Handle GPS location updates from leader
   socket.on('location:update', async (data) => {
     const { accessCode, lat, lng, accuracy } = data;
-
-    console.log(`📍 Location update from ${accessCode}: ${lat}, ${lng}`);
-
     const timestamp = Date.now();
 
-    // Broadcast to all followers in this ride's room
+    // Always broadcast to followers immediately (cheap, in-memory)
     socket.to(accessCode).emit('location:updated', {
-      accessCode,
-      lat,
-      lng,
-      accuracy,
-      timestamp
+      accessCode, lat, lng, accuracy, timestamp
     });
 
-    // Persist current position only (no trail accumulation per ping)
+    // Throttle DB writes to once per 5s per leader
+    const lastWrite = lastDbWrite.get(accessCode) || 0;
+    if ((timestamp - lastWrite) < DB_WRITE_INTERVAL) return;
+    lastDbWrite.set(accessCode, timestamp);
+
     try {
       await query(`
         UPDATE ride_instances
@@ -255,6 +257,7 @@ io.on('connection', (socket) => {
 
     // Remove from leader tracking
     activeLeaders.delete(accessCode);
+    lastDbWrite.delete(accessCode);
 
     // Leave room
     socket.leave(accessCode);
@@ -388,6 +391,7 @@ io.on('connection', (socket) => {
 
             // Remove from tracking
             activeLeaders.delete(accessCode);
+            lastDbWrite.delete(accessCode);
 
             // End the ride in database
             try {
