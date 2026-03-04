@@ -154,7 +154,7 @@
     // Re-acquire wake lock (released when page goes hidden)
     if ('wakeLock' in navigator && !wakeLock) {
       navigator.wakeLock.request('screen')
-        .then(wl => { wakeLock = wl; })
+        .then(wl => { wakeLock = wl; wl.addEventListener('release', () => { wakeLock = null; }); })
         .catch(() => {});
     }
 
@@ -174,6 +174,7 @@
     try {
       if ('wakeLock' in navigator) {
         wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
       }
     } catch (err) {
       console.warn('Wake lock not supported or failed:', err);
@@ -210,12 +211,9 @@
 
     socket.on('connect_error', (error) => {
       console.error('Connection error:', error);
-      // Only show fatal error during initial connect, not during reconnection
-      if (!broadcasting) {
-        clearTimeout(startTimeout);
-        connecting = false;
-        connectionError = 'Failed to connect. Please try again.';
-      }
+      // Don't act on connect_error — let the 15s startTimeout be the sole
+      // decider for initial connect failure. During broadcast, Socket.IO
+      // auto-reconnects and the disconnect handler shows the yellow banner.
     });
 
     socket.on('ride:error', (data) => {
