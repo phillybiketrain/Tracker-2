@@ -44,9 +44,21 @@ router.get('/live', async (req, res) => {
         r.start_location_icon_url
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
-      WHERE ri.status = 'live'
-        AND ri.region_id = $1
-      ORDER BY ri.started_at DESC
+      JOIN regions reg ON ri.region_id = reg.id
+      WHERE ri.region_id = $1
+        AND (
+          ri.status = 'live'
+          OR (
+            ri.status = 'scheduled'
+            AND ri.date = (CURRENT_DATE AT TIME ZONE reg.timezone)::date
+            AND r.departure_time BETWEEN
+              (CURRENT_TIMESTAMP AT TIME ZONE reg.timezone)::time
+              AND ((CURRENT_TIMESTAMP AT TIME ZONE reg.timezone) + INTERVAL '1 hour')::time
+          )
+        )
+      ORDER BY
+        CASE ri.status WHEN 'live' THEN 0 ELSE 1 END,
+        r.departure_time ASC
     `, [regionData.id]);
 
     res.json({
