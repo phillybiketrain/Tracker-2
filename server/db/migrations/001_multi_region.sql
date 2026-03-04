@@ -35,10 +35,10 @@ UPDATE admin_users SET role = 'super' WHERE region_id IS NULL;
 -- ============================================
 ALTER TABLE routes ADD COLUMN IF NOT EXISTS region_id INTEGER REFERENCES regions(id);
 
--- Set region_id for existing philly routes
+-- Set region_id for existing routes without one
 UPDATE routes
 SET region_id = (SELECT id FROM regions WHERE slug = 'philly')
-WHERE region IS NOT NULL AND region_id IS NULL;
+WHERE region_id IS NULL;
 
 -- ============================================
 -- UPDATE RIDE_INSTANCES
