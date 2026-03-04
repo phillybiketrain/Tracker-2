@@ -65,6 +65,19 @@ router.get('/live', async (req, res) => {
 });
 
 /**
+ * GET /api/rides/live-count
+ * Quick count of currently live rides (used by nav badge, no region filter)
+ */
+router.get('/live-count', async (req, res) => {
+  try {
+    const result = await queryOne(`SELECT COUNT(*) as count FROM ride_instances WHERE status = 'live'`);
+    res.json({ success: true, count: parseInt(result.count) });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get live count' });
+  }
+});
+
+/**
  * GET /api/rides
  * Browse upcoming ride instances (filtered by region)
  */

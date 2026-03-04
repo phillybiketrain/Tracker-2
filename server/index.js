@@ -215,7 +215,7 @@ io.on('connection', (socket) => {
         // Update existing instance to live
         await query(`
           UPDATE ride_instances
-          SET status = 'live', started_at = NOW(), current_location = NULL, location_trail = '[]'::jsonb
+          SET status = 'live', started_at = NOW(), current_location = NULL
           WHERE id = $1
         `, [instance_id]);
         console.log(`✅ Started ${instance_status} ride: ${accessCode} (${Date.now() - startTime}ms)`);
@@ -233,8 +233,7 @@ io.on('connection', (socket) => {
         DO UPDATE SET
           status = 'live',
           started_at = NOW(),
-          current_location = NULL,
-          location_trail = '[]'::jsonb
+          current_location = NULL
         RETURNING id
       `, [route_id, region_id]);
 
@@ -267,8 +266,7 @@ io.on('connection', (socket) => {
         UPDATE ride_instances
         SET status = 'completed',
             ended_at = NOW(),
-            current_location = NULL,
-            location_trail = '[]'::jsonb
+            current_location = NULL
         WHERE id IN (
           SELECT ri.id
           FROM ride_instances ri
@@ -397,8 +395,7 @@ io.on('connection', (socket) => {
                 UPDATE ride_instances
                 SET status = 'completed',
                     ended_at = NOW(),
-                    current_location = NULL,
-                    location_trail = '[]'::jsonb
+                    current_location = NULL
                 WHERE id IN (
                   SELECT ri.id
                   FROM ride_instances ri
@@ -443,12 +440,31 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
-  console.log('\n🚴 Philly Bike Train Server');
-  console.log(`📡 HTTP API: http://localhost:${PORT}`);
-  console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-  console.log('\n✅ Server ready!\n');
+
+// Clear any rides left live from a previous server crash before accepting connections
+async function clearStaleRides() {
+  try {
+    const result = await query(`
+      UPDATE ride_instances
+      SET status = 'completed', ended_at = NOW(), current_location = NULL
+      WHERE status = 'live'
+    `);
+    if (result.rowCount > 0) {
+      console.log(`⚠️  Cleared ${result.rowCount} stale live ride(s) from previous session`);
+    }
+  } catch (error) {
+    console.error('❌ Failed to clear stale rides on startup:', error);
+  }
+}
+
+clearStaleRides().then(() => {
+  httpServer.listen(PORT, () => {
+    console.log('\n🚴 Philly Bike Train Server');
+    console.log(`📡 HTTP API: http://localhost:${PORT}`);
+    console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+    console.log('\n✅ Server ready!\n');
+  });
 });
 
 // Graceful shutdown

@@ -16,14 +16,11 @@
 
   async function checkLiveRides() {
     try {
-      const res = await fetch(`${API_URL}/rides/live`);
+      const res = await fetch(`${API_URL}/rides/live-count`);
       const data = await res.json();
       if (data.success) {
         liveRidesCount = data.count;
       }
-
-      // TODO: Check for rides starting soon (within 30 min)
-      // For now, just check live rides
       liveSoon = false;
     } catch (error) {
       console.error('Error checking live rides:', error);
