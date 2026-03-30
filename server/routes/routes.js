@@ -147,6 +147,87 @@ router.get('/:accessCode', async (req, res) => {
 });
 
 /**
+ * PUT /api/routes/:accessCode
+ * Update route details (name, description, departure_time, waypoints)
+ */
+router.put('/:accessCode', async (req, res) => {
+  try {
+    const { accessCode } = req.params;
+
+    const route = await queryOne(`
+      SELECT * FROM routes WHERE access_code = $1
+    `, [accessCode.toUpperCase()]);
+
+    if (!route) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const UpdateRouteSchema = z.object({
+      name: z.string().min(1).max(200).optional(),
+      description: z.string().max(2500).optional(),
+      departure_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+      waypoints: z.array(z.object({
+        lat: z.number().min(-90).max(90),
+        lng: z.number().min(-180).max(180),
+        address: z.string().optional()
+      })).min(2).optional()
+    });
+
+    const data = UpdateRouteSchema.parse(req.body);
+
+    const sets = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (data.name !== undefined) {
+      sets.push(`name = $${paramIndex++}`);
+      params.push(data.name);
+    }
+    if (data.description !== undefined) {
+      sets.push(`description = $${paramIndex++}`);
+      params.push(data.description);
+    }
+    if (data.departure_time !== undefined) {
+      sets.push(`departure_time = $${paramIndex++}`);
+      params.push(data.departure_time);
+    }
+    if (data.waypoints !== undefined) {
+      sets.push(`waypoints = $${paramIndex++}`);
+      params.push(JSON.stringify(data.waypoints));
+
+      // Recalculate derived fields
+      const previewImageUrl = generateRoutePreviewUrl(data.waypoints);
+      sets.push(`preview_image_url = $${paramIndex++}`);
+      params.push(previewImageUrl);
+
+      const distanceMiles = calculateRouteDistance(data.waypoints);
+      sets.push(`distance_miles = $${paramIndex++}`);
+      params.push(distanceMiles);
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(route.id);
+    const updated = await queryOne(`
+      UPDATE routes SET ${sets.join(', ')} WHERE id = $${paramIndex} RETURNING *
+    `, params);
+
+    console.log(`✏️  Route updated: ${updated.name} (${accessCode})`);
+
+    res.json({ success: true, data: updated });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    console.error('Error updating route:', error);
+    res.status(500).json({ error: 'Failed to update route', message: error.message });
+  }
+});
+
+/**
  * POST /api/routes/:accessCode/schedule
  * Schedule ride instances for specific dates
  */
