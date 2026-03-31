@@ -228,9 +228,12 @@
 
         const el = document.createElement('div');
         el.className = 'midpoint-handle';
-        el.style.cssText = 'cursor: grab; width: 14px; height: 14px; border-radius: 50%; background: #E85D04; opacity: 0.35; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: opacity 0.15s, transform 0.15s;';
-        el.onmouseenter = () => { el.style.opacity = '0.9'; el.style.transform = 'scale(1.4)'; };
-        el.onmouseleave = () => { el.style.opacity = '0.35'; el.style.transform = 'scale(1)'; };
+        el.style.cssText = 'cursor: grab; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;';
+        const dot = document.createElement('div');
+        dot.style.cssText = 'width: 12px; height: 12px; border-radius: 50%; background: #E85D04; opacity: 0.4; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: opacity 0.15s, width 0.15s, height 0.15s;';
+        el.appendChild(dot);
+        el.onmouseenter = () => { dot.style.opacity = '0.9'; dot.style.width = '16px'; dot.style.height = '16px'; };
+        el.onmouseleave = () => { dot.style.opacity = '0.4'; dot.style.width = '12px'; dot.style.height = '12px'; };
 
         const insertAfter = i; // insert after this index
         const midMarker = new mapboxgl.Marker({ element: el, draggable: true })

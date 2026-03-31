@@ -163,7 +163,7 @@ router.put('/:accessCode', async (req, res) => {
     const UpdateRouteSchema = z.object({
       name: z.string().min(1).max(200).optional(),
       description: z.string().max(2500).optional(),
-      departure_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+      departure_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/).optional(),
       waypoints: z.array(z.object({
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
