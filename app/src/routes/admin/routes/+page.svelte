@@ -67,6 +67,7 @@
       description: route.description,
       departure_time: route.departure_time,
       tag: route.tag,
+      slug: route.slug || '',
       access_code: route.access_code
     };
     error = '';
@@ -117,7 +118,8 @@
           name: editing.name,
           description: editing.description,
           departure_time: editing.departure_time,
-          tag: editing.tag
+          tag: editing.tag,
+          slug: editing.slug
         })
       });
 
@@ -638,6 +640,23 @@
                 </select>
               </div>
             </div>
+
+            <div>
+              <label class="block text-sm font-medium text-warm-gray-900 mb-2">
+                Vanity URL Slug
+              </label>
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-warm-gray-500">phillybiketrain.org/</span>
+                <input
+                  type="text"
+                  bind:value={editing.slug}
+                  disabled={saving}
+                  placeholder="e.g. navyyard"
+                  class="flex-1 px-4 py-2 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <p class="text-xs text-warm-gray-500 mt-1">Lowercase letters, numbers, hyphens only. Leave blank for no vanity URL.</p>
+            </div>
           </div>
 
           <!-- Start Location Icon -->
@@ -906,7 +925,12 @@
                       <Markdown content={route.description} className="text-sm text-warm-gray-600 mb-2" />
                     {/if}
 
-                    <div class="flex gap-6 text-xs text-warm-gray-600">
+                    <div class="flex gap-6 text-xs text-warm-gray-600 flex-wrap">
+                      {#if route.slug}
+                        <div>
+                          <span class="font-medium">URL:</span> /{route.slug}
+                        </div>
+                      {/if}
                       <div>
                         <span class="font-medium">Departs:</span> {route.departure_time}
                       </div>

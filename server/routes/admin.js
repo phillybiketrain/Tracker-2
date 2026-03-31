@@ -795,7 +795,7 @@ router.get('/routes/all', requireAdmin, async (req, res) => {
 router.put('/routes/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, departure_time, tag } = req.body;
+    const { name, description, departure_time, tag, slug } = req.body;
 
     // Get route to check access
     const existingRoute = await queryOne(`
@@ -815,15 +815,19 @@ router.put('/routes/:id', requireAdmin, async (req, res) => {
       });
     }
 
+    // Sanitize slug: lowercase, alphanumeric + hyphens only, or null to clear
+    const cleanSlug = slug ? slug.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 50) || null : (slug === '' ? null : undefined);
+
     const route = await queryOne(`
       UPDATE routes
       SET name = COALESCE($1, name),
           description = COALESCE($2, description),
           departure_time = COALESCE($3, departure_time),
-          tag = COALESCE($4, tag)
-      WHERE id = $5
+          tag = COALESCE($4, tag),
+          slug = CASE WHEN $6 THEN $5 ELSE slug END
+      WHERE id = $7
       RETURNING *
-    `, [name, description, departure_time, tag, id]);
+    `, [name, description, departure_time, tag, cleanSlug, cleanSlug !== undefined, id]);
 
     console.log(`✏️  Route updated: ${route.name}`);
 

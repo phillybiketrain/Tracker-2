@@ -112,6 +112,57 @@ router.post('/', async (req, res) => {
 });
 
 /**
+ * GET /api/routes/by-slug/:slug
+ * Get route and its next ride by vanity URL slug
+ */
+router.get('/by-slug/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const route = await queryOne(`
+      SELECT * FROM routes WHERE slug = $1
+    `, [slug.toLowerCase()]);
+
+    if (!route) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const nextRide = await queryOne(`
+      SELECT ri.*
+      FROM ride_instances ri
+      WHERE ri.route_id = $1
+        AND ri.date >= CURRENT_DATE
+        AND ri.status IN ('scheduled', 'live')
+      ORDER BY ri.date ASC
+      LIMIT 1
+    `, [route.id]);
+
+    const otherRides = await queryAll(`
+      SELECT ri.id, ri.date, ri.status
+      FROM ride_instances ri
+      WHERE ri.route_id = $1
+        AND ri.date >= CURRENT_DATE
+        AND ri.status IN ('scheduled', 'live')
+        ${nextRide ? `AND ri.id != $2` : ''}
+      ORDER BY ri.date ASC
+      LIMIT 10
+    `, nextRide ? [route.id, nextRide.id] : [route.id]);
+
+    res.json({
+      success: true,
+      data: {
+        ...route,
+        next_ride: nextRide || null,
+        other_rides: otherRides
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching route by slug:', error);
+    res.status(500).json({ error: 'Failed to fetch route', message: error.message });
+  }
+});
+
+/**
  * GET /api/routes/:accessCode
  * Get route by access code
  */

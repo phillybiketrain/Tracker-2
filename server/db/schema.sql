@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS routes (
   access_code     TEXT UNIQUE NOT NULL,
 
   -- Core attributes
+  slug            TEXT UNIQUE,
   name            TEXT NOT NULL,
   description     TEXT,
   waypoints       JSONB NOT NULL,
