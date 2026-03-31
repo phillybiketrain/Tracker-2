@@ -695,10 +695,40 @@
                         class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">Partner Logo URL</label>
-                      <input type="text" bind:value={editing.hero_partner_logo_url} disabled={saving}
-                        placeholder="https://..."
-                        class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">Partner Logo</label>
+                      {#if editing.hero_partner_logo_url}
+                        <div class="flex items-center gap-3 mb-2">
+                          <img src={editing.hero_partner_logo_url} alt="Partner logo" class="h-10 w-auto object-contain rounded bg-warm-gray-100 p-1" />
+                          <button type="button" on:click={() => { editing.hero_partner_logo_url = ''; }} class="text-xs text-red-600 hover:text-red-800">Remove</button>
+                        </div>
+                      {/if}
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/jpg, image/svg+xml"
+                        disabled={saving}
+                        on:change={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          const formData = new FormData();
+                          formData.append('logo', file);
+                          try {
+                            const res = await fetch(`${API_URL}/admin/routes/${editing.id}/upload-partner-logo`, {
+                              method: 'POST',
+                              headers: { 'Authorization': `Bearer ${token}` },
+                              body: formData
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              editing.hero_partner_logo_url = data.data.partner_logo_url;
+                            } else {
+                              error = data.error || 'Failed to upload logo';
+                            }
+                          } catch (err) {
+                            error = 'Failed to upload logo';
+                          }
+                        }}
+                        class="w-full text-sm text-warm-gray-700 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-warm-gray-100 file:text-warm-gray-700 hover:file:bg-warm-gray-200"
+                      />
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-3">

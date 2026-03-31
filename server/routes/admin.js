@@ -1192,6 +1192,48 @@ router.post('/routes/:routeId/upload-icon', requireAdmin, upload.single('icon'),
 });
 
 /**
+ * POST /api/admin/routes/:routeId/upload-partner-logo
+ * Upload partner logo for event hero page
+ */
+router.post('/routes/:routeId/upload-partner-logo', requireAdmin, upload.single('logo'), async (req, res) => {
+  try {
+    const { routeId } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const route = await queryOne(`SELECT * FROM routes WHERE id = $1`, [routeId]);
+    if (!route) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    if (req.admin.role !== 'super' && req.admin.region_id !== route.region_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const logoUrl = await uploadToCloudinary(req.file.buffer, 'partner-logos');
+
+    // Delete old partner logo from Cloudinary if exists
+    const hero = route.hero || {};
+    if (hero.partner_logo_url) {
+      await deleteFromCloudinary(hero.partner_logo_url);
+    }
+
+    // Update hero JSON with new logo URL
+    hero.partner_logo_url = logoUrl;
+    await query(`UPDATE routes SET hero = $1::jsonb WHERE id = $2`, [JSON.stringify(hero), route.id]);
+
+    console.log(`🎨 Partner logo uploaded for route: ${route.name}`);
+
+    res.json({ success: true, data: { partner_logo_url: logoUrl } });
+  } catch (error) {
+    console.error('Error uploading partner logo:', error);
+    res.status(500).json({ error: 'Failed to upload partner logo', message: error.message });
+  }
+});
+
+/**
  * DELETE /api/admin/routes/:routeId/icon
  * Remove start location icon from a route (admin only)
  */
