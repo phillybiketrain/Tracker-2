@@ -277,9 +277,6 @@
                     {/if}
                     <div class="flex items-center gap-4 mt-2 text-xs text-warm-gray-600">
                       <span>Departs: {route.departure_time}</span>
-                      {#if route.estimated_duration}
-                        <span>Duration: {route.estimated_duration}</span>
-                      {/if}
                       <span>Tag: {route.tag}</span>
                       <span>Rides: {route.scheduled_rides_count}</span>
                     </div>

@@ -63,7 +63,6 @@
               access_code: ride.access_code,
               waypoints: ride.waypoints,
               departure_time: ride.departure_time,
-              estimated_duration: ride.estimated_duration,
               distance_miles: ride.distance_miles,
               preview_image_url: ride.preview_image_url,
               start_location_icon_url: ride.start_location_icon_url,
@@ -228,10 +227,6 @@
                   <div class="text-warm-gray-400">•</div>
                   <div class="text-warm-gray-600">{ride.distance_miles} mi</div>
                 {/if}
-                {#if ride.estimated_duration}
-                  <div class="text-warm-gray-400">•</div>
-                  <div class="text-warm-gray-600">{ride.estimated_duration}</div>
-                {/if}
               </div>
 
               <!-- Track Live Button -->
@@ -311,10 +306,6 @@
               {#if route.distance_miles}
                 <div class="text-warm-gray-400">•</div>
                 <div class="text-warm-gray-600">{route.distance_miles} mi</div>
-              {/if}
-              {#if route.estimated_duration}
-                <div class="text-warm-gray-400">•</div>
-                <div class="text-warm-gray-600">{route.estimated_duration}</div>
               {/if}
             </div>
 

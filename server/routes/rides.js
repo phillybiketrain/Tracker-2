@@ -37,7 +37,7 @@ router.get('/live', async (req, res) => {
         r.description as route_description,
         r.waypoints,
         r.departure_time,
-        r.estimated_duration,
+
         r.distance_miles,
         r.tag,
         r.preview_image_url,
@@ -142,7 +142,7 @@ router.get('/', async (req, res) => {
         r.description as route_description,
         r.waypoints,
         r.departure_time,
-        r.estimated_duration,
+
         r.distance_miles,
         r.tag,
         r.preview_image_url,
@@ -185,7 +185,7 @@ router.get('/:id', async (req, res) => {
         r.description as route_description,
         r.waypoints,
         r.departure_time,
-        r.estimated_duration,
+
         r.distance_miles,
         r.start_location_icon_url
       FROM ride_instances ri
@@ -313,7 +313,7 @@ router.get('/by-code/:accessCode', async (req, res) => {
         r.description as route_description,
         r.waypoints,
         r.departure_time,
-        r.estimated_duration,
+
         r.distance_miles
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id

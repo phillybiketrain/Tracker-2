@@ -35,7 +35,6 @@
               access_code: ride.access_code,
               waypoints: ride.waypoints,
               departure_time: ride.departure_time,
-              estimated_duration: ride.estimated_duration,
               preview_image_url: ride.preview_image_url,
               start_location_icon_url: ride.start_location_icon_url,
               rides: []
@@ -246,10 +245,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span class="font-medium">{formatTime(route.departure_time)}</span>
-                  {#if route.estimated_duration}
-                    <span class="text-gray-400">•</span>
-                    <span class="text-gray-600">{route.estimated_duration}</span>
-                  {/if}
                 </div>
 
                 <div class="flex items-center gap-2 text-gray-700">

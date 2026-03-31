@@ -22,7 +22,6 @@ const CreateRouteSchema = z.object({
     address: z.string().optional()
   })).min(2),
   departure_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
-  estimated_duration: z.string().optional(),
   creator_email: z.string().email().optional(),
   tag: z.enum(['community', 'regular', 'special']).optional(),
   region: z.string().optional() // Region slug (defaults to 'philly')
@@ -69,20 +68,19 @@ router.post('/', async (req, res) => {
     const route = await queryOne(`
       INSERT INTO routes (
         access_code, name, description, waypoints,
-        departure_time, estimated_duration, creator_email,
+        departure_time, creator_email,
         status, tag, region_id, preview_image_url, distance_miles
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `, [
       accessCode.code,
       data.name,
       data.description || null,
-      JSON.stringify(data.waypoints), // JSONB accepts string
+      JSON.stringify(data.waypoints),
       data.departure_time,
-      data.estimated_duration || null,
       data.creator_email || null,
-      'approved', // Auto-approve routes
+      'approved',
       data.tag || 'community',
       region.id,
       previewImageUrl,
@@ -353,7 +351,6 @@ router.get('/:accessCode/next-ride', async (req, res) => {
           description: route.description,
           waypoints: route.waypoints,
           departure_time: route.departure_time,
-          estimated_duration: route.estimated_duration,
           tag: route.tag,
           preview_image_url: route.preview_image_url
         },

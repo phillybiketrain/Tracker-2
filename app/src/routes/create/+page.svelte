@@ -9,7 +9,6 @@
   let routeName = '';
   let description = '';
   let departureTime = '08:00';
-  let estimatedDuration = '';
   let routeTag = 'community';
   let selectedDates = [];
   let accessCode = '';
@@ -91,7 +90,6 @@
         description: description || undefined,
         waypoints,
         departure_time: departureTime,
-        estimated_duration: estimatedDuration ? `${estimatedDuration} min` : undefined,
         tag: routeTag
       };
 
@@ -335,7 +333,7 @@
                 <div class="text-xs text-warm-gray-500 mt-1 text-right">{description.length}/2500</div>
               </div>
 
-              <div class="grid grid-cols-3 gap-4">
+              <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-warm-gray-900 mb-2">
                     Departure Time <span class="text-red-500">*</span>
@@ -343,18 +341,6 @@
                   <input
                     type="time"
                     bind:value={departureTime}
-                    class="w-full px-4 py-3 border border-warm-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-warm-gray-900 mb-2">
-                    Duration (min)
-                  </label>
-                  <input
-                    type="number"
-                    bind:value={estimatedDuration}
-                    placeholder="30"
                     class="w-full px-4 py-3 border border-warm-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>

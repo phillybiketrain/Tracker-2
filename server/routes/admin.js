@@ -795,7 +795,7 @@ router.get('/routes/all', requireAdmin, async (req, res) => {
 router.put('/routes/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, departure_time, estimated_duration, tag } = req.body;
+    const { name, description, departure_time, tag } = req.body;
 
     // Get route to check access
     const existingRoute = await queryOne(`
@@ -820,11 +820,10 @@ router.put('/routes/:id', requireAdmin, async (req, res) => {
       SET name = COALESCE($1, name),
           description = COALESCE($2, description),
           departure_time = COALESCE($3, departure_time),
-          estimated_duration = COALESCE($4, estimated_duration),
-          tag = COALESCE($5, tag)
-      WHERE id = $6
+          tag = COALESCE($4, tag)
+      WHERE id = $5
       RETURNING *
-    `, [name, description, departure_time, estimated_duration, tag, id]);
+    `, [name, description, departure_time, tag, id]);
 
     console.log(`✏️  Route updated: ${route.name}`);
 

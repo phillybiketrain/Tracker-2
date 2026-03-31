@@ -66,7 +66,6 @@
       name: route.name,
       description: route.description,
       departure_time: route.departure_time,
-      estimated_duration: route.estimated_duration,
       tag: route.tag,
       access_code: route.access_code
     };
@@ -118,7 +117,6 @@
           name: editing.name,
           description: editing.description,
           departure_time: editing.departure_time,
-          estimated_duration: editing.estimated_duration ? parseInt(editing.estimated_duration) : null,
           tag: editing.tag
         })
       });
@@ -627,19 +625,6 @@
 
               <div>
                 <label class="block text-sm font-medium text-warm-gray-900 mb-2">
-                  Duration (min)
-                </label>
-                <input
-                  type="number"
-                  bind:value={editing.estimated_duration}
-                  disabled={saving}
-                  placeholder="30"
-                  class="w-full px-4 py-2 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-warm-gray-900 mb-2">
                   Tag
                 </label>
                 <select
@@ -925,11 +910,6 @@
                       <div>
                         <span class="font-medium">Departs:</span> {route.departure_time}
                       </div>
-                      {#if route.estimated_duration}
-                        <div>
-                          <span class="font-medium">Duration:</span> {route.estimated_duration} min
-                        </div>
-                      {/if}
                       <div>
                         <span class="font-medium">Scheduled Rides:</span> {route.scheduled_rides_count}
                       </div>

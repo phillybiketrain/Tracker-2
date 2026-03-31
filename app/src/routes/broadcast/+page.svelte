@@ -419,9 +419,6 @@
         <span class="font-medium text-warm-gray-900">{route.name}</span>
         <div class="flex items-center gap-4 text-warm-gray-600">
           <span>{followerCount} follower{followerCount !== 1 ? 's' : ''}</span>
-          {#if route.estimated_duration}
-            <span>~{route.estimated_duration}</span>
-          {/if}
         </div>
       </div>
     </div>

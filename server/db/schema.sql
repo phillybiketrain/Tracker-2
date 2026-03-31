@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS routes (
   description     TEXT,
   waypoints       JSONB NOT NULL,
   departure_time  TIME NOT NULL,
-  estimated_duration INTERVAL,
   distance_miles  DECIMAL(5,1),
 
   -- Metadata
