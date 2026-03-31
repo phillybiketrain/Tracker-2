@@ -16,6 +16,9 @@
   export let leaderLocation = null;
   export let autoCenter = false;
   export let locationTrail = []; // Array of {lat, lng, timestamp} for leader's trail
+  export let editable = false; // Enable drag-to-move waypoints and midpoint insert handles
+  export let onWaypointDrag = null; // (index, {lat, lng}) => void
+  export let onWaypointInsert = null; // (afterIndex, {lat, lng}) => void
 
   // Multi-ride mode: array of {accessCode, waypoints, leaderLocation, locationTrail, routeName}
   export let rides = [];
@@ -68,6 +71,7 @@
   let userInteracting = false;
   let interactionTimeout = null;
   let multiRideMarkers = {}; // Store markers by accessCode
+  let midpointMarkers = []; // Midpoint insert handles for editable mode
 
   onMount(() => {
     if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'pk.YOUR_MAPBOX_TOKEN_HERE') {
@@ -147,6 +151,8 @@
     // Clear existing markers
     markers.forEach(m => m.remove());
     markers = [];
+    midpointMarkers.forEach(m => m.remove());
+    midpointMarkers = [];
 
     // Add new markers
     if (showMarkers || showStartIconOnly) {
@@ -155,12 +161,18 @@
         if (showStartIconOnly && index !== 0) return;
 
         // For large routes (GPX imports), only show start and end markers
+        // In editable mode with many points, show sampled markers + all midpoints
         const isFirstOrLast = index === 0 || index === waypoints.length - 1;
-        if (!showAllMarkers && !isFirstOrLast) return;
+        if (!editable && !showAllMarkers && !isFirstOrLast) return;
+
+        // In editable mode with large routes, show every Nth marker
+        if (editable && waypoints.length > 50) {
+          const step = Math.ceil(waypoints.length / 30);
+          if (!isFirstOrLast && index % step !== 0) return;
+        }
 
         const el = document.createElement('div');
         el.className = 'waypoint-marker';
-        el.style.cursor = onMarkerClick ? 'pointer' : 'default';
 
         // Use custom icon for start location (first waypoint) if provided
         if (index === 0 && startLocationIconUrl) {
@@ -168,10 +180,14 @@
           el.onmouseenter = () => { el.querySelector('img').style.transform = 'scale(1.1)'; };
           el.onmouseleave = () => { el.querySelector('img').style.transform = 'scale(1)'; };
         } else if (showMarkers) {
-          // Only show numbered markers when showMarkers is true (not just showStartIconOnly)
-          el.innerHTML = `<div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-lg transition-transform hover:scale-110">${index + 1}</div>`;
+          if (editable) {
+            el.style.cursor = 'grab';
+            el.innerHTML = `<div class="bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center font-bold shadow-lg text-xs" style="transition: transform 0.15s;">${index + 1}</div>`;
+          } else {
+            el.style.cursor = onMarkerClick ? 'pointer' : 'default';
+            el.innerHTML = `<div class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-lg transition-transform hover:scale-110">${index + 1}</div>`;
+          }
         } else {
-          // Skip this waypoint if we're only showing start icon
           return;
         }
 
@@ -183,12 +199,51 @@
           });
         }
 
-        const marker = new mapboxgl.Marker(el)
+        const isDraggable = editable && onWaypointDrag;
+        const marker = new mapboxgl.Marker({ element: el, draggable: isDraggable })
           .setLngLat([wp.lng, wp.lat])
           .addTo(map);
 
+        if (isDraggable) {
+          const waypointIndex = index; // capture for closure
+          marker.on('dragend', () => {
+            const lngLat = marker.getLngLat();
+            onWaypointDrag(waypointIndex, { lat: lngLat.lat, lng: lngLat.lng });
+          });
+        }
+
         markers.push(marker);
       });
+    }
+
+    // Add midpoint insert handles in editable mode
+    if (editable && onWaypointInsert && waypoints.length >= 2) {
+      // For large routes, only show midpoints between sampled markers
+      const step = waypoints.length > 50 ? Math.ceil(waypoints.length / 30) : 1;
+
+      for (let i = 0; i < waypoints.length - step; i += step) {
+        const j = Math.min(i + step, waypoints.length - 1);
+        const midLat = (waypoints[i].lat + waypoints[j].lat) / 2;
+        const midLng = (waypoints[i].lng + waypoints[j].lng) / 2;
+
+        const el = document.createElement('div');
+        el.className = 'midpoint-handle';
+        el.style.cssText = 'cursor: grab; width: 14px; height: 14px; border-radius: 50%; background: #E85D04; opacity: 0.35; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: opacity 0.15s, transform 0.15s;';
+        el.onmouseenter = () => { el.style.opacity = '0.9'; el.style.transform = 'scale(1.4)'; };
+        el.onmouseleave = () => { el.style.opacity = '0.35'; el.style.transform = 'scale(1)'; };
+
+        const insertAfter = i; // insert after this index
+        const midMarker = new mapboxgl.Marker({ element: el, draggable: true })
+          .setLngLat([midLng, midLat])
+          .addTo(map);
+
+        midMarker.on('dragend', () => {
+          const lngLat = midMarker.getLngLat();
+          onWaypointInsert(insertAfter, { lat: lngLat.lat, lng: lngLat.lng });
+        });
+
+        midpointMarkers.push(midMarker);
+      }
     }
 
     // Draw route line

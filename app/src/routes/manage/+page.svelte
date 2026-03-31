@@ -104,6 +104,18 @@
     editWaypoints = [...editWaypoints, coords];
   }
 
+  function handleWaypointDrag(index, coords) {
+    editWaypoints = editWaypoints.map((wp, i) => i === index ? coords : wp);
+  }
+
+  function handleWaypointInsert(afterIndex, coords) {
+    editWaypoints = [
+      ...editWaypoints.slice(0, afterIndex + 1),
+      coords,
+      ...editWaypoints.slice(afterIndex + 1)
+    ];
+  }
+
   function removeWaypoint(index) {
     editWaypoints = editWaypoints.filter((_, i) => i !== index);
   }
@@ -422,7 +434,14 @@
                   {/if}
 
                   <div class="h-80 rounded-lg overflow-hidden mb-3">
-                    <Map waypoints={editWaypoints} onMapClick={handleMapClick} showAllMarkers={editWaypoints.length <= 50} />
+                    <Map
+                      waypoints={editWaypoints}
+                      onMapClick={handleMapClick}
+                      showAllMarkers={editWaypoints.length <= 50}
+                      editable={true}
+                      onWaypointDrag={handleWaypointDrag}
+                      onWaypointInsert={handleWaypointInsert}
+                    />
                   </div>
 
                   <div class="flex gap-2 mb-3">
