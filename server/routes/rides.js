@@ -41,7 +41,8 @@ router.get('/live', async (req, res) => {
         r.distance_miles,
         r.tag,
         r.preview_image_url,
-        r.start_location_icon_url
+        r.start_location_icon_url,
+        r.slug as route_slug
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
       JOIN regions reg ON ri.region_id = reg.id
@@ -146,7 +147,8 @@ router.get('/', async (req, res) => {
         r.distance_miles,
         r.tag,
         r.preview_image_url,
-        r.start_location_icon_url
+        r.start_location_icon_url,
+        r.slug as route_slug
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
       ${whereClause}

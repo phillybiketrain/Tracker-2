@@ -199,7 +199,7 @@
       <div class="grid md:grid-cols-3 gap-4">
         {#each liveRides as ride (ride.id)}
           <a
-            href="/ride/{ride.id}"
+            href="{ride.route_slug ? `/${ride.route_slug}` : `/ride/${ride.id}`}"
             class="card hover:shadow-md transition-all p-0 overflow-hidden block {hoveredRide === ride.access_code ? 'ring-2 ring-primary shadow-lg' : ''}"
             on:mouseenter={() => hoveredRide = ride.access_code}
             on:mouseleave={() => hoveredRide = null}

@@ -68,7 +68,16 @@
       departure_time: route.departure_time,
       tag: route.tag,
       slug: route.slug || '',
-      access_code: route.access_code
+      access_code: route.access_code,
+      hero_enabled: !!(route.hero),
+      hero_partner_name: route.hero?.partner_name || '',
+      hero_partner_logo_url: route.hero?.partner_logo_url || '',
+      hero_start_label: route.hero?.start_label || '',
+      hero_end_label: route.hero?.end_label || '',
+      hero_meet_time: route.hero?.meet_time || '',
+      hero_roll_time: route.hero?.roll_time || '',
+      hero_arrive_time: route.hero?.arrive_time || '',
+      hero_callout: route.hero?.callout || ''
     };
     error = '';
     success = '';
@@ -119,7 +128,17 @@
           description: editing.description,
           departure_time: editing.departure_time,
           tag: editing.tag,
-          slug: editing.slug
+          slug: editing.slug,
+          hero: editing.hero_enabled ? {
+            partner_name: editing.hero_partner_name || undefined,
+            partner_logo_url: editing.hero_partner_logo_url || undefined,
+            start_label: editing.hero_start_label || undefined,
+            end_label: editing.hero_end_label || undefined,
+            meet_time: editing.hero_meet_time || undefined,
+            roll_time: editing.hero_roll_time || undefined,
+            arrive_time: editing.hero_arrive_time || undefined,
+            callout: editing.hero_callout || undefined
+          } : null
         })
       });
 
@@ -656,6 +675,74 @@
                 />
               </div>
               <p class="text-xs text-warm-gray-500 mt-1">Lowercase letters, numbers, hyphens only. Leave blank for no vanity URL.</p>
+            </div>
+
+            <!-- Event Hero Page -->
+            <div class="border border-warm-gray-200 rounded-lg p-4 mt-4">
+              <label class="flex items-center gap-2 cursor-pointer mb-3">
+                <input type="checkbox" bind:checked={editing.hero_enabled} disabled={saving} class="rounded" />
+                <span class="text-sm font-bold text-warm-gray-900">Event Hero Page</span>
+                <span class="text-xs text-warm-gray-500">(shows rich landing page at vanity URL)</span>
+              </label>
+
+              {#if editing.hero_enabled}
+                <div class="space-y-3 mt-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">Partner Name</label>
+                      <input type="text" bind:value={editing.hero_partner_name} disabled={saving}
+                        placeholder="e.g. Navy Yard Philadelphia"
+                        class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">Partner Logo URL</label>
+                      <input type="text" bind:value={editing.hero_partner_logo_url} disabled={saving}
+                        placeholder="https://..."
+                        class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">Start Location</label>
+                      <input type="text" bind:value={editing.hero_start_label} disabled={saving}
+                        placeholder="e.g. Ultimo Coffee 15th & Mifflin"
+                        class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">End Location</label>
+                      <input type="text" bind:value={editing.hero_end_label} disabled={saving}
+                        placeholder="e.g. Marine Parade Grounds"
+                        class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">Meet Time</label>
+                      <input type="text" bind:value={editing.hero_meet_time} disabled={saving}
+                        placeholder="7:20am"
+                        class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">Roll Time</label>
+                      <input type="text" bind:value={editing.hero_roll_time} disabled={saving}
+                        placeholder="7:30am"
+                        class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-warm-gray-700 mb-1">Arrive Time</label>
+                      <input type="text" bind:value={editing.hero_arrive_time} disabled={saving}
+                        placeholder="8:00am"
+                        class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-warm-gray-700 mb-1">Callout (e.g. coffee meetup info)</label>
+                    <textarea bind:value={editing.hero_callout} disabled={saving} rows="3"
+                      placeholder="Can't make the ride?&#10;Join us for coffee!&#10;8:00-9:00am&#10;Marine Parade Grounds"
+                      class="w-full px-3 py-1.5 border border-warm-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                  </div>
+                </div>
+              {/if}
             </div>
           </div>
 

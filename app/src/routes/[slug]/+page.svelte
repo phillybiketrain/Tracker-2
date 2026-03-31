@@ -109,7 +109,7 @@
     if (timeInterval) clearInterval(timeInterval);
   });
 
-  $: isSpecial = route && route.tag === 'special';
+  $: hero = route?.hero || null;
   $: isLive = nextRide && nextRide.status === 'live';
 </script>
 
@@ -175,48 +175,107 @@
 {:else}
   <!-- Route Page -->
 
-  {#if isSpecial}
-    <!-- Special Event Hero -->
-    <div class="bg-gradient-to-b from-warm-gray-900 to-warm-gray-800 text-white">
-      <div class="container mx-auto px-6 py-12 md:py-16">
-        <div class="max-w-3xl mx-auto text-center">
-          <div class="inline-block px-4 py-1 bg-amber-500 text-warm-gray-900 text-sm font-bold rounded-full mb-6">
-            SPECIAL EVENT
-          </div>
-          <h1 class="text-4xl md:text-5xl font-bold mb-4">{route.name}</h1>
+  {#if hero}
+    <!-- Event Hero Page -->
+    <div class="bg-warm-gray-900 text-white">
+      <div class="container mx-auto px-6 py-10 md:py-14">
+        <div class="max-w-2xl mx-auto">
 
-          {#if nextRide}
-            <p class="text-xl text-warm-gray-300 mb-8">{formatDate(nextRide.date)}</p>
+          <!-- Partner co-branding -->
+          {#if hero.partner_name || hero.partner_logo_url}
+            <div class="flex items-center justify-center gap-4 md:gap-6 mb-8">
+              {#if route.start_location_icon_url}
+                <img src="{route.start_location_icon_url}" alt="Philly Bike Train" class="h-16 md:h-20 w-auto" />
+              {/if}
+              {#if hero.partner_logo_url}
+                <span class="text-warm-gray-500 text-2xl font-light">&times;</span>
+                <img src="{hero.partner_logo_url}" alt="{hero.partner_name || 'Partner'}" class="h-16 md:h-20 w-auto" />
+              {/if}
+            </div>
           {/if}
 
-          <!-- Timeline -->
-          <div class="flex items-center justify-center gap-4 md:gap-8 mb-8">
-            <div class="text-center">
-              <div class="text-xs text-warm-gray-400 uppercase tracking-wider mb-1">Meet</div>
-              <div class="text-2xl md:text-3xl font-bold">{formatTime(route.departure_time)}</div>
+          <div class="text-center mb-8">
+            <div class="inline-block px-4 py-1 bg-amber-500 text-warm-gray-900 text-xs font-bold uppercase tracking-wider rounded-full mb-4">
+              Special Event
             </div>
-            <div class="text-warm-gray-600 text-2xl">&rarr;</div>
-            <div class="text-center">
-              <div class="text-xs text-warm-gray-400 uppercase tracking-wider mb-1">Roll</div>
-              <div class="text-2xl md:text-3xl font-bold">
-                {(() => {
-                  const [h, m] = route.departure_time.split(':').map(Number);
-                  const rollMin = m + 10;
-                  return formatTime(`${String(h + Math.floor(rollMin / 60)).padStart(2, '0')}:${String(rollMin % 60).padStart(2, '0')}`);
-                })()}
+            <h1 class="text-3xl md:text-5xl font-black mb-2">Ride with us!</h1>
+            {#if nextRide}
+              <p class="text-xl md:text-2xl font-bold text-warm-gray-300">{formatDate(nextRide.date)}</p>
+            {/if}
+          </div>
+
+          <!-- Start / End -->
+          {#if hero.start_label || hero.end_label}
+            <div class="bg-white/10 rounded-xl p-5 mb-8 max-w-md mx-auto">
+              {#if hero.start_label}
+                <div class="flex items-start gap-3 mb-2">
+                  <span class="font-bold text-sm text-warm-gray-400 w-12 flex-shrink-0">Start:</span>
+                  <span class="text-lg font-semibold">{hero.start_label}</span>
+                </div>
+              {/if}
+              {#if hero.end_label}
+                <div class="flex items-start gap-3">
+                  <span class="font-bold text-sm text-warm-gray-400 w-12 flex-shrink-0">End:</span>
+                  <span class="text-lg font-semibold">{hero.end_label}</span>
+                </div>
+              {/if}
+            </div>
+          {/if}
+
+          <!-- Meet / Roll / Arrive timeline -->
+          {#if hero.meet_time || hero.roll_time || hero.arrive_time}
+            <div class="flex items-center justify-center mb-8">
+              <div class="flex items-center gap-0">
+                {#if hero.meet_time}
+                  <div class="text-center px-4 md:px-6">
+                    <div class="text-xs text-warm-gray-400 uppercase tracking-widest mb-1">Meet</div>
+                    <div class="text-2xl md:text-3xl font-black">{hero.meet_time}</div>
+                  </div>
+                {/if}
+                {#if hero.roll_time}
+                  <div class="text-warm-gray-600 text-xl md:text-2xl px-1">&mdash;&rarr;</div>
+                  <div class="text-center px-4 md:px-6">
+                    <div class="text-xs text-warm-gray-400 uppercase tracking-widest mb-1">Roll</div>
+                    <div class="text-2xl md:text-3xl font-black">{hero.roll_time}</div>
+                  </div>
+                {/if}
+                {#if hero.arrive_time}
+                  <div class="text-warm-gray-600 text-xl md:text-2xl px-1">&mdash;&rarr;</div>
+                  <div class="text-center px-4 md:px-6">
+                    <div class="text-xs text-warm-gray-400 uppercase tracking-widest mb-1">Arrive</div>
+                    <div class="text-2xl md:text-3xl font-black">{hero.arrive_time}</div>
+                  </div>
+                {/if}
               </div>
             </div>
-          </div>
+          {/if}
 
-          {#if isLive}
-            <button on:click={startTracking} class="btn bg-green-500 hover:bg-green-600 text-white text-lg px-8 py-4 rounded-xl shadow-lg">
-              Track Live Now
-            </button>
-          {:else if nextRide}
-            <div class="inline-block px-6 py-3 bg-white/10 rounded-xl text-warm-gray-300">
-              Ride scheduled &mdash; check back on the day to track live
+          <!-- Callout -->
+          {#if hero.callout}
+            <div class="bg-warm-gray-100 text-warm-gray-900 rounded-xl p-5 max-w-sm mx-auto mb-8 text-center">
+              {#each hero.callout.split('\n') as line}
+                <p class="{line === hero.callout.split('\n')[0] ? 'text-sm text-warm-gray-600' : 'font-bold text-lg'}">{line}</p>
+              {/each}
             </div>
           {/if}
+
+          <!-- CTA -->
+          <div class="text-center">
+            {#if isLive}
+              <button on:click={startTracking} class="inline-block px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-xl shadow-lg transition-colors">
+                Track Live Now
+              </button>
+            {:else if nextRide}
+              <div class="inline-block px-6 py-3 bg-white/10 rounded-xl text-warm-gray-400 text-sm">
+                Check back on ride day to track live
+              </div>
+            {:else}
+              <div class="inline-block px-6 py-3 bg-white/10 rounded-xl text-warm-gray-400 text-sm">
+                No upcoming dates scheduled yet
+              </div>
+            {/if}
+          </div>
+
         </div>
       </div>
     </div>

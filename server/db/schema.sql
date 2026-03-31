@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS routes (
 
   -- Core attributes
   slug            TEXT UNIQUE,
+  hero            JSONB,
   name            TEXT NOT NULL,
   description     TEXT,
   waypoints       JSONB NOT NULL,

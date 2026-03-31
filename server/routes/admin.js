@@ -795,7 +795,7 @@ router.get('/routes/all', requireAdmin, async (req, res) => {
 router.put('/routes/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, departure_time, tag, slug } = req.body;
+    const { name, description, departure_time, tag, slug, hero } = req.body;
 
     // Get route to check access
     const existingRoute = await queryOne(`
@@ -818,16 +818,20 @@ router.put('/routes/:id', requireAdmin, async (req, res) => {
     // Sanitize slug: lowercase, alphanumeric + hyphens only, or null to clear
     const cleanSlug = slug ? slug.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 50) || null : (slug === '' ? null : undefined);
 
+    // Hero: pass through as JSONB, or null to clear
+    const heroJson = hero && Object.keys(hero).length > 0 ? JSON.stringify(hero) : null;
+
     const route = await queryOne(`
       UPDATE routes
       SET name = COALESCE($1, name),
           description = COALESCE($2, description),
           departure_time = COALESCE($3, departure_time),
           tag = COALESCE($4, tag),
-          slug = CASE WHEN $6 THEN $5 ELSE slug END
-      WHERE id = $7
+          slug = CASE WHEN $6 THEN $5 ELSE slug END,
+          hero = CASE WHEN $8 THEN $7::jsonb ELSE hero END
+      WHERE id = $9
       RETURNING *
-    `, [name, description, departure_time, tag, cleanSlug, cleanSlug !== undefined, id]);
+    `, [name, description, departure_time, tag, cleanSlug, cleanSlug !== undefined, heroJson, hero !== undefined, id]);
 
     console.log(`✏️  Route updated: ${route.name}`);
 

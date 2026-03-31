@@ -37,6 +37,7 @@
               departure_time: ride.departure_time,
               preview_image_url: ride.preview_image_url,
               start_location_icon_url: ride.start_location_icon_url,
+              slug: ride.route_slug || null,
               rides: []
             });
           }
@@ -256,7 +257,7 @@
               </div>
 
               <a
-                href="/ride/{nextRide.id}"
+                href="{route.slug ? `/${route.slug}` : `/ride/${nextRide.id}`}"
                 class="block text-center bg-primary hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 View Next Ride →

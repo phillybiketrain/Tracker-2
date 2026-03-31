@@ -66,6 +66,7 @@
               distance_miles: ride.distance_miles,
               preview_image_url: ride.preview_image_url,
               start_location_icon_url: ride.start_location_icon_url,
+              slug: ride.route_slug || null,
               rides: []
             });
           }
@@ -197,7 +198,7 @@
 
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {#each liveRides as ride (ride.id)}
-          <a href="/ride/{ride.id}" class="card hover:shadow-md transition-all bg-gradient-to-br from-green-50 to-white border-2 border-green-500 relative block cursor-pointer p-0">
+          <a href="{ride.route_slug ? `/${ride.route_slug}` : `/ride/${ride.id}`}" class="card hover:shadow-md transition-all bg-gradient-to-br from-green-50 to-white border-2 border-green-500 relative block cursor-pointer p-0">
             <!-- Route Map Preview -->
             {#if ride.waypoints && ride.waypoints.length > 0}
               <div class="h-32 w-full overflow-hidden relative">
@@ -276,7 +277,7 @@
         {@const hasMore = route.rides.length > 1}
         {@const isOpen = openOverlay === route.id}
 
-        <a href="/ride/{nextRide.id}" class="card hover:shadow-md transition-all bg-white relative block cursor-pointer p-0">
+        <a href="{route.slug ? `/${route.slug}` : `/ride/${nextRide.id}`}" class="card hover:shadow-md transition-all bg-white relative block cursor-pointer p-0">
           <!-- Route Map Preview -->
           {#if route.waypoints && route.waypoints.length > 0}
             <div class="h-32 w-full overflow-hidden relative">
