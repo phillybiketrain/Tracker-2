@@ -85,13 +85,7 @@
   }
 
   $: isLive = nextRide && nextRide.status === 'live';
-  $: nextRideDate = nextRide ? nextRide.date.split('T')[0] : null;
-  $: nextRideIsSpecial = nextRideDate === SPECIAL_DATE;
-  $: showSpecialPromo = !nextRideIsSpecial && new Date(SPECIAL_DATE) > new Date();
-  $: allUpcoming = [
-    ...(nextRide ? [nextRide] : []),
-    ...otherRides
-  ];
+  $: showSpecialHero = new Date(SPECIAL_DATE) > new Date();
 </script>
 
 <svelte:head>
@@ -99,7 +93,6 @@
 </svelte:head>
 
 {#if tracking}
-  <!-- Full-screen live tracking -->
   <div class="fixed inset-0 flex flex-col bg-warm-gray-50">
     <div class="flex items-center justify-between px-4 py-2 bg-white border-b border-warm-gray-200">
       <div class="flex items-center gap-2">
@@ -119,7 +112,92 @@
   </div>
 
 {:else}
-  <div class="min-h-screen bg-white">
+
+  <!-- ============================================ -->
+  <!-- SPECIAL EVENT HERO — full viewport takeover  -->
+  <!-- ============================================ -->
+  {#if showSpecialHero}
+    <div class="relative bg-warm-gray-950 text-white overflow-hidden" style="min-height: 70vh;">
+      <!-- Subtle radial glow -->
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,93,4,0.08)_0%,transparent_70%)]"></div>
+
+      <div class="relative z-10 flex flex-col items-center justify-center px-6 py-12 md:py-16" style="min-height: 70vh;">
+
+        <!-- Co-branding -->
+        <div class="flex items-center justify-center gap-5 md:gap-8 mb-10">
+          <img src="/pbt_logo.png" alt="Philly Bike Train" class="h-16 md:h-24 lg:h-28 w-auto invert" onerror="this.style.display='none'" />
+          <span class="text-3xl md:text-4xl text-warm-gray-600 font-extralight select-none">&times;</span>
+          <img src="/navyyard_logo.png" alt="Navy Yard Philadelphia" class="h-16 md:h-24 lg:h-28 w-auto" onerror="this.style.display='none'" />
+        </div>
+
+        <!-- Headline -->
+        <div class="text-center mb-10">
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-black leading-[0.95] mb-4 tracking-tight">
+            Ride with us!
+          </h1>
+          <p class="text-3xl md:text-4xl lg:text-5xl font-bold text-warm-gray-300">
+            Wednesday, May 6<sup class="text-lg md:text-xl">th</sup>
+          </p>
+        </div>
+
+        <!-- Start / End -->
+        <div class="mb-10 text-center md:text-left">
+          <div class="inline-flex flex-col gap-2 text-lg md:text-xl">
+            <div class="flex items-baseline gap-3">
+              <span class="font-bold text-warm-gray-500 w-14 text-right text-base">Start</span>
+              <span class="font-semibold">Ultimo Coffee 15th &amp; Mifflin</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <span class="font-bold text-warm-gray-500 w-14 text-right text-base">End</span>
+              <span class="font-semibold">Marine Parade Grounds</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="flex items-center justify-center gap-2 md:gap-4 mb-10">
+          <div class="text-center">
+            <div class="text-xs md:text-sm text-warm-gray-500 uppercase tracking-widest mb-2">Meet</div>
+            <div class="text-3xl md:text-5xl font-black">7:20<span class="text-lg md:text-2xl font-bold text-warm-gray-400">am</span></div>
+          </div>
+          <div class="flex items-center mx-2 md:mx-4">
+            <div class="w-6 md:w-10 h-px bg-warm-gray-700"></div>
+            <svg class="w-5 h-5 md:w-6 md:h-6 text-warm-gray-700 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="text-center">
+            <div class="text-xs md:text-sm text-warm-gray-500 uppercase tracking-widest mb-2">Roll</div>
+            <div class="text-3xl md:text-5xl font-black">7:30<span class="text-lg md:text-2xl font-bold text-warm-gray-400">am</span></div>
+          </div>
+          <div class="flex items-center mx-2 md:mx-4">
+            <div class="w-6 md:w-10 h-px bg-warm-gray-700"></div>
+            <svg class="w-5 h-5 md:w-6 md:h-6 text-warm-gray-700 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="text-center">
+            <div class="text-xs md:text-sm text-warm-gray-500 uppercase tracking-widest mb-2">Arrive</div>
+            <div class="text-3xl md:text-5xl font-black">8:00<span class="text-lg md:text-2xl font-bold text-warm-gray-400">am</span></div>
+          </div>
+        </div>
+
+        <!-- Coffee callout -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-2xl px-8 py-5 text-center max-w-sm mb-8">
+          <p class="text-warm-gray-400 text-sm mb-1">Can't make the ride?</p>
+          <p class="text-xl font-bold mb-1">Join us for coffee!</p>
+          <p class="text-warm-gray-300 font-medium">8:00 &ndash; 9:00am &bull; Marine Parade Grounds</p>
+        </div>
+
+        <!-- Scroll hint -->
+        <div class="animate-bounce text-warm-gray-600 mt-auto">
+          <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7"/></svg>
+        </div>
+
+      </div>
+    </div>
+  {/if}
+
+  <!-- ============================================ -->
+  <!-- REGULAR ROUTE SECTION                        -->
+  <!-- ============================================ -->
+  <div class="bg-white">
     <div class="max-w-2xl mx-auto px-6 py-8">
 
       <!-- Route header -->
@@ -129,7 +207,7 @@
             <img src={route.start_location_icon_url} alt="" class="w-12 h-12 object-contain rounded-lg" />
           {/if}
           <div>
-            <h1 class="text-2xl font-bold text-warm-gray-900">{route?.name || 'Navy Yard'}</h1>
+            <h2 class="text-2xl font-bold text-warm-gray-900">{route?.name || 'Navy Yard'}</h2>
             {#if route?.departure_time}
               <p class="text-warm-gray-600 text-sm">Departs {formatTime(route.departure_time)}</p>
             {/if}
@@ -145,7 +223,7 @@
 
       {#if loading}
         <div class="text-center py-16">
-          <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
 
       {:else if !route}
@@ -177,9 +255,7 @@
                   Track Live
                 </button>
               {:else}
-                <div class="text-sm text-warm-gray-400">
-                  {nextRide.status === 'scheduled' ? 'Scheduled' : ''}
-                </div>
+                <span class="text-sm text-warm-gray-400">Scheduled</span>
               {/if}
             </div>
           </div>
@@ -218,73 +294,12 @@
           </div>
         {/if}
 
-        <!-- May 6 Special Event Promo -->
-        {#if showSpecialPromo || nextRideIsSpecial}
-          <div class="border-t border-warm-gray-200 pt-8 mt-4">
-            <div class="bg-warm-gray-900 text-white rounded-2xl p-6 md:p-8">
-
-              <!-- Co-branding -->
-              <div class="flex items-center justify-center gap-4 mb-6">
-                <img src="/pbt_logo.png" alt="Philly Bike Train" class="h-14 md:h-16 w-auto invert" onerror="this.style.display='none'" />
-                <span class="text-2xl text-warm-gray-500 font-light">&times;</span>
-                <img src="/navyyard_logo.png" alt="Navy Yard Philadelphia" class="h-14 md:h-16 w-auto" onerror="this.style.display='none'" />
-              </div>
-
-              <div class="text-center mb-5">
-                <div class="inline-block px-3 py-0.5 bg-amber-500 text-warm-gray-900 text-xs font-bold uppercase tracking-wider rounded-full mb-3">
-                  Special Event
-                </div>
-                <h2 class="text-3xl md:text-4xl font-black leading-tight mb-1">Ride with us!</h2>
-                <p class="text-xl md:text-2xl font-bold text-warm-gray-300">Wednesday, May 6<sup>th</sup></p>
-              </div>
-
-              <!-- Start / End -->
-              <div class="bg-white/10 rounded-xl p-4 mb-5 max-w-sm mx-auto">
-                <div class="flex items-baseline gap-3 mb-1">
-                  <span class="font-bold text-sm text-warm-gray-400 w-11">Start:</span>
-                  <span class="font-semibold">Ultimo Coffee 15th &amp; Mifflin</span>
-                </div>
-                <div class="flex items-baseline gap-3">
-                  <span class="font-bold text-sm text-warm-gray-400 w-11">End:</span>
-                  <span class="font-semibold">Marine Parade Grounds</span>
-                </div>
-              </div>
-
-              <!-- Timeline -->
-              <div class="flex items-center justify-center mb-5">
-                <div class="text-center px-3 md:px-4">
-                  <div class="text-xs text-warm-gray-400 uppercase tracking-wider mb-1">Meet</div>
-                  <div class="text-xl md:text-2xl font-black">7:20am</div>
-                </div>
-                <div class="text-warm-gray-600 px-1">&rarr;</div>
-                <div class="text-center px-3 md:px-4">
-                  <div class="text-xs text-warm-gray-400 uppercase tracking-wider mb-1">Roll</div>
-                  <div class="text-xl md:text-2xl font-black">7:30am</div>
-                </div>
-                <div class="text-warm-gray-600 px-1">&rarr;</div>
-                <div class="text-center px-3 md:px-4">
-                  <div class="text-xs text-warm-gray-400 uppercase tracking-wider mb-1">Arrive</div>
-                  <div class="text-xl md:text-2xl font-black">8:00am</div>
-                </div>
-              </div>
-
-              <!-- Coffee callout -->
-              <div class="bg-warm-gray-100 text-warm-gray-900 rounded-xl p-4 max-w-xs mx-auto text-center">
-                <p class="text-warm-gray-600 text-xs mb-0.5">Can't make the ride?</p>
-                <p class="font-bold text-base mb-0.5">Join us for coffee!</p>
-                <p class="font-semibold text-sm">8:00-9:00am &bull; Marine Parade Grounds</p>
-              </div>
-
-            </div>
-          </div>
-        {/if}
-
-        <!-- Footer -->
-        <div class="border-t border-warm-gray-100 mt-8 pt-4 text-center">
+        <div class="border-t border-warm-gray-100 pt-4 text-center">
           <a href="/browse" class="text-sm text-primary hover:text-secondary font-medium">Browse all rides</a>
         </div>
 
       {/if}
     </div>
   </div>
+
 {/if}
