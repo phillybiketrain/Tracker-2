@@ -117,17 +117,17 @@
   <!-- SPECIAL EVENT HERO — full viewport takeover  -->
   <!-- ============================================ -->
   {#if showSpecialHero}
-    <div class="relative bg-warm-gray-950 text-white overflow-hidden" style="min-height: 70vh;">
+    <div class="relative text-white overflow-hidden" style="min-height: 70vh; background: #0a0a0a;">
       <!-- Subtle radial glow -->
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,93,4,0.08)_0%,transparent_70%)]"></div>
 
       <div class="relative z-10 flex flex-col items-center justify-center px-6 py-12 md:py-16" style="min-height: 70vh;">
 
         <!-- Co-branding -->
-        <div class="flex items-center justify-center gap-5 md:gap-8 mb-10">
-          <img src="/pbt_logo.png" alt="Philly Bike Train" class="h-16 md:h-24 lg:h-28 w-auto invert" onerror="this.style.display='none'" />
+        <div class="flex items-center justify-center gap-6 md:gap-10 mb-10">
+          <img src="/pbt_logo.png" alt="Philly Bike Train" class="h-16 md:h-24 lg:h-28 w-auto invert" onerror="this.parentElement.style.display='none'" />
           <span class="text-3xl md:text-4xl text-warm-gray-600 font-extralight select-none">&times;</span>
-          <img src="/navyyard_logo.png" alt="Navy Yard Philadelphia" class="h-16 md:h-24 lg:h-28 w-auto" onerror="this.style.display='none'" />
+          <img src="/navyyard_logo.png" alt="Navy Yard Philadelphia" class="h-16 md:h-24 lg:h-28 w-auto" onerror="this.remove()" />
         </div>
 
         <!-- Headline -->
