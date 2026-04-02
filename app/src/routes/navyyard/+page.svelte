@@ -125,9 +125,9 @@
 
         <!-- Co-branding -->
         <div class="flex items-center justify-center gap-6 md:gap-10 mb-10">
-          <img src="/pbt_logo.png" alt="Philly Bike Train" class="h-16 md:h-24 lg:h-28 w-auto invert" onerror="this.parentElement.style.display='none'" />
+          <img src="/pbt_logo.svg" alt="Philly Bike Train" class="h-16 md:h-24 lg:h-28 w-auto" />
           <span class="text-3xl md:text-4xl text-warm-gray-600 font-extralight select-none">&times;</span>
-          <img src="/navyyard_logo.png" alt="Navy Yard Philadelphia" class="h-16 md:h-24 lg:h-28 w-auto" onerror="this.remove()" />
+          <img src="/navyyard_logo.svg" alt="Navy Yard Philadelphia" class="h-12 md:h-20 lg:h-24 w-auto" />
         </div>
 
         <!-- Headline -->
@@ -155,26 +155,26 @@
         </div>
 
         <!-- Timeline -->
-        <div class="flex items-center justify-center gap-2 md:gap-4 mb-10">
-          <div class="text-center">
-            <div class="text-xs md:text-sm text-warm-gray-500 uppercase tracking-widest mb-2">Meet</div>
-            <div class="text-3xl md:text-5xl font-black">7:20<span class="text-lg md:text-2xl font-bold text-warm-gray-400">am</span></div>
+        <div class="flex items-center justify-center mb-10 w-full max-w-lg mx-auto">
+          <div class="text-center flex-1">
+            <div class="text-[10px] md:text-sm text-warm-gray-500 uppercase tracking-widest mb-1 md:mb-2">Meet</div>
+            <div class="text-2xl md:text-5xl font-black">7:20<span class="text-sm md:text-2xl font-bold text-warm-gray-400">am</span></div>
           </div>
-          <div class="flex items-center mx-2 md:mx-4">
-            <div class="w-6 md:w-10 h-px bg-warm-gray-700"></div>
-            <svg class="w-5 h-5 md:w-6 md:h-6 text-warm-gray-700 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <div class="flex items-center flex-shrink-0 mx-1 md:mx-3">
+            <div class="w-4 md:w-10 h-px bg-warm-gray-700"></div>
+            <svg class="w-4 h-4 md:w-6 md:h-6 text-warm-gray-700 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
           </div>
-          <div class="text-center">
-            <div class="text-xs md:text-sm text-warm-gray-500 uppercase tracking-widest mb-2">Roll</div>
-            <div class="text-3xl md:text-5xl font-black">7:30<span class="text-lg md:text-2xl font-bold text-warm-gray-400">am</span></div>
+          <div class="text-center flex-1">
+            <div class="text-[10px] md:text-sm text-warm-gray-500 uppercase tracking-widest mb-1 md:mb-2">Roll</div>
+            <div class="text-2xl md:text-5xl font-black">7:30<span class="text-sm md:text-2xl font-bold text-warm-gray-400">am</span></div>
           </div>
-          <div class="flex items-center mx-2 md:mx-4">
-            <div class="w-6 md:w-10 h-px bg-warm-gray-700"></div>
-            <svg class="w-5 h-5 md:w-6 md:h-6 text-warm-gray-700 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <div class="flex items-center flex-shrink-0 mx-1 md:mx-3">
+            <div class="w-4 md:w-10 h-px bg-warm-gray-700"></div>
+            <svg class="w-4 h-4 md:w-6 md:h-6 text-warm-gray-700 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
           </div>
-          <div class="text-center">
-            <div class="text-xs md:text-sm text-warm-gray-500 uppercase tracking-widest mb-2">Arrive</div>
-            <div class="text-3xl md:text-5xl font-black">8:00<span class="text-lg md:text-2xl font-bold text-warm-gray-400">am</span></div>
+          <div class="text-center flex-1">
+            <div class="text-[10px] md:text-sm text-warm-gray-500 uppercase tracking-widest mb-1 md:mb-2">Arrive</div>
+            <div class="text-2xl md:text-5xl font-black">8:00<span class="text-sm md:text-2xl font-bold text-warm-gray-400">am</span></div>
           </div>
         </div>
 
