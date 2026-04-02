@@ -123,6 +123,13 @@
 
       <div class="relative z-10 flex flex-col items-center justify-center px-6 py-12 md:py-16" style="min-height: 70vh;">
 
+        <!-- Special event label -->
+        <div class="flex items-center gap-4 mb-10 w-full max-w-xs mx-auto">
+          <div class="flex-1 h-px bg-warm-gray-700"></div>
+          <span class="text-xs md:text-sm tracking-[0.25em] uppercase text-warm-gray-500 font-medium whitespace-nowrap">Special Event</span>
+          <div class="flex-1 h-px bg-warm-gray-700"></div>
+        </div>
+
         <!-- Co-branding -->
         <div class="flex items-center justify-center gap-6 md:gap-10 mb-10">
           <img src="/pbt_logo.svg" alt="Philly Bike Train" class="h-16 md:h-24 lg:h-28 w-auto" />
