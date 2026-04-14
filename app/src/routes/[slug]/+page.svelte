@@ -5,6 +5,7 @@
   import Markdown from '$lib/components/Markdown.svelte';
   import { io } from 'socket.io-client';
   import { API_URL, SOCKET_URL } from '$lib/config.js';
+  import { downloadGpx } from '$lib/utils/gpx.js';
 
   let route = null;
   let nextRide = null;
@@ -310,6 +311,18 @@
           <div class="h-96 mb-4 rounded-2xl overflow-hidden">
             <Map waypoints={route.waypoints || []} showMarkers={false} />
           </div>
+
+          {#if route.waypoints?.length >= 2}
+            <div class="mb-4">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-warm-gray-300 text-warm-gray-700 hover:bg-warm-gray-50 text-sm font-medium"
+                on:click={() => downloadGpx(route.waypoints, route.name)}
+              >
+                Download GPX
+              </button>
+            </div>
+          {/if}
 
           {#if route.description}
             <div class="card">
