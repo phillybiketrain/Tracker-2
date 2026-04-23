@@ -173,11 +173,20 @@ export async function publishRide(rideId) {
 
 /**
  * Mint (or return the existing) 4-char collaborator code for a ride. Idempotent.
+ *
+ * `preferredCode` is optional — when provided, GoThere tries to use that
+ * specific code instead of generating one, and rotates the existing row if
+ * it holds a different code. Used by the route migration flow so the new
+ * GoThere code equals the old PBT access_code. Older GoThere deployments
+ * that don't know about `code` in the body silently ignore it.
+ *
  * @param {string} rideId
+ * @param {{ preferredCode?: string }} [options]
  * @returns {Promise<{ code: string, expiresAt: string }>}
  */
-export function mintRideCollaboratorCode(rideId) {
-  return request('POST', `/rides/${rideId}/collaborator-code`);
+export function mintRideCollaboratorCode(rideId, options = {}) {
+  const body = options.preferredCode ? { code: options.preferredCode } : undefined;
+  return request('POST', `/rides/${rideId}/collaborator-code`, body !== undefined ? { json: body } : {});
 }
 
 /**
@@ -243,11 +252,21 @@ export async function publishSeries(seriesId) {
 /**
  * Mint (or return the existing) persistent 4-char code for a series. Idempotent.
  * Same code works for every occurrence — this is the core leader-UX primitive.
+ *
+ * `preferredCode` is optional — when provided, GoThere tries to use that
+ * specific code instead of generating one, and rotates the existing row if
+ * it holds a different code. Used by the route migration flow so the new
+ * GoThere code equals the old PBT access_code (so leaders have one code,
+ * not two). Older GoThere deployments that don't know about `code` in the
+ * body silently ignore it.
+ *
  * @param {string} seriesId
+ * @param {{ preferredCode?: string }} [options]
  * @returns {Promise<{ code: string }>}
  */
-export function mintSeriesCollaboratorCode(seriesId) {
-  return request('POST', `/ride-series/${seriesId}/collaborator-code`);
+export function mintSeriesCollaboratorCode(seriesId, options = {}) {
+  const body = options.preferredCode ? { code: options.preferredCode } : undefined;
+  return request('POST', `/ride-series/${seriesId}/collaborator-code`, body !== undefined ? { json: body } : {});
 }
 
 /**

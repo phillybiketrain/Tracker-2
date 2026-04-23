@@ -74,16 +74,29 @@ export async function migrateRoute(entry, { dryRun = false } = {}) {
     return { accessCode, status: 'failed', detail: 'route not found in DB' };
   }
 
-  // Idempotency: skip if already migrated
+  // If already linked, the only work left is to make sure the GoThere code
+  // equals the PBT access_code (so leaders have one code across both
+  // systems, not two). Re-mint with preferredCode = access_code and let
+  // GoThere rotate if needed. If the codes already match, the endpoint
+  // returns the existing row unchanged.
   if (route.gothere_ride_id || route.gothere_series_id) {
-    const kind = route.gothere_ride_id ? 'ride' : 'series';
-    return {
-      accessCode,
-      status: 'skipped',
-      detail: `already linked to Go There ${kind} (${route.gothere_collaborator_code})`,
-      gothereCode: route.gothere_collaborator_code,
-      gothereSlug: route.gothere_slug,
-    };
+    if (route.gothere_collaborator_code === route.access_code) {
+      return {
+        accessCode,
+        status: 'skipped',
+        detail: `already linked with matching code`,
+        gothereCode: route.gothere_collaborator_code,
+        gothereSlug: route.gothere_slug,
+      };
+    }
+    if (dryRun) {
+      return {
+        accessCode,
+        status: 'dry-run',
+        detail: `would update Go There code from ${route.gothere_collaborator_code} → ${route.access_code}`,
+      };
+    }
+    return retrofitCodeOnly(route);
   }
 
   // Waypoints can arrive parsed (JSONB) or stringified
@@ -131,7 +144,12 @@ export async function migrateRoute(entry, { dryRun = false } = {}) {
       gothereSeriesId = gtSeries.id;
       await gothere.uploadSeriesRoute(gothereSeriesId, gpx);
       await gothere.publishSeries(gothereSeriesId);
-      const gtCode = await gothere.mintSeriesCollaboratorCode(gothereSeriesId);
+      // Preserve the existing PBT access_code as the GoThere code so leaders
+      // have one code across both systems. Falls back to random on older
+      // GoThere deployments that don't honor `preferredCode`.
+      const gtCode = await gothere.mintSeriesCollaboratorCode(gothereSeriesId, {
+        preferredCode: route.access_code,
+      });
       gtResult = { slug: gtSeries.publicSlug, code: gtCode.code };
     } else {
       const startsAt = toIsoWithOffset(date, departureTime, PBT_TIMEZONE);
@@ -148,7 +166,9 @@ export async function migrateRoute(entry, { dryRun = false } = {}) {
       gothereRideId = gtRide.id;
       await gothere.uploadRideRoute(gothereRideId, gpx);
       await gothere.publishRide(gothereRideId);
-      const gtCode = await gothere.mintRideCollaboratorCode(gothereRideId);
+      const gtCode = await gothere.mintRideCollaboratorCode(gothereRideId, {
+        preferredCode: route.access_code,
+      });
       gtResult = { slug: gtRide.slug, code: gtCode.code };
     }
 
@@ -201,12 +221,71 @@ export async function migrateRoute(entry, { dryRun = false } = {}) {
 }
 
 /**
- * List routes that haven't been migrated yet — used by the admin page to
- * show a populated table without making the user re-type access codes.
+ * Retrofit the PBT access_code onto an already-migrated route's Go There
+ * record. Called when the GoThere linkage exists but the codes don't match
+ * (e.g. migrations that ran before preferredCode support landed).
  *
- * @returns {Promise<Array<{ id: string, access_code: string, name: string, departure_time: string, waypoints_count: number, recent_dates: string[] }>>}
+ * @param {any} route  The row loaded from `routes`.
+ * @returns {Promise<MigrateRouteResult>}
  */
-export async function listUnmigratedRoutes() {
+async function retrofitCodeOnly(route) {
+  try {
+    /** @type {{ code: string }} */
+    let gtCode;
+    if (route.gothere_series_id) {
+      gtCode = await gothere.mintSeriesCollaboratorCode(route.gothere_series_id, {
+        preferredCode: route.access_code,
+      });
+    } else {
+      gtCode = await gothere.mintRideCollaboratorCode(route.gothere_ride_id, {
+        preferredCode: route.access_code,
+      });
+    }
+    await query(
+      `UPDATE routes SET gothere_collaborator_code = $1 WHERE id = $2`,
+      [gtCode.code, route.id]
+    );
+    return {
+      accessCode: route.access_code,
+      status: 'migrated',
+      detail: `Go There code updated to match (${gtCode.code})`,
+      gothereCode: gtCode.code,
+      gothereSlug: route.gothere_slug,
+    };
+  } catch (err) {
+    return {
+      accessCode: route.access_code,
+      status: 'failed',
+      detail: `code update failed: ${err?.message ?? err}`,
+      errorCode: err?.name === 'GoThereError' ? err.code : undefined,
+    };
+  }
+}
+
+/**
+ * List routes that still need work: either not yet linked to Go There, or
+ * linked but with a GoThere collaborator code that doesn't match the PBT
+ * access_code (so the admin page can offer a one-click retrofit).
+ *
+ * Each row includes a `linkage_state` discriminator the UI uses to decide
+ * whether to prompt for recurrence+date (unmigrated) or show a single
+ * "update code" action (code_mismatch).
+ *
+ * @returns {Promise<Array<{
+ *   id: string,
+ *   access_code: string,
+ *   name: string,
+ *   departure_time: string,
+ *   waypoints_count: number,
+ *   recent_dates: string[],
+ *   linkage_state: 'unmigrated' | 'code_mismatch',
+ *   gothere_collaborator_code: string | null,
+ *   gothere_slug: string | null,
+ *   recurrence: string | null,
+ *   date: string | null,
+ * }>>}
+ */
+export async function listMigrationCandidates() {
   const rows = await queryOne(`
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'routes' AND column_name = 'gothere_ride_id'
@@ -227,15 +306,29 @@ export async function listUnmigratedRoutes() {
         ARRAY_AGG(ri.date::text ORDER BY ri.date DESC)
           FILTER (WHERE ri.date IS NOT NULL AND ri.date >= CURRENT_DATE - INTERVAL '90 days'),
         ARRAY[]::text[]
-      ) AS recent_dates
+      ) AS recent_dates,
+      CASE
+        WHEN r.gothere_ride_id IS NULL AND r.gothere_series_id IS NULL THEN 'unmigrated'
+        ELSE 'code_mismatch'
+      END AS linkage_state,
+      r.gothere_collaborator_code,
+      r.gothere_slug,
+      r.recurrence,
+      r.date::text AS date
     FROM routes r
     LEFT JOIN ride_instances ri ON ri.route_id = r.id
-    WHERE r.gothere_ride_id IS NULL
-      AND r.gothere_series_id IS NULL
-      AND r.status = 'approved'
+    WHERE r.status = 'approved'
+      AND (
+        (r.gothere_ride_id IS NULL AND r.gothere_series_id IS NULL)
+        OR r.gothere_collaborator_code IS DISTINCT FROM r.access_code
+      )
     GROUP BY r.id
     ORDER BY r.created_at ASC
   `);
 
   return result.rows;
 }
+
+// Backwards-compat alias during the transition — the admin endpoint import
+// still points here.
+export const listUnmigratedRoutes = listMigrationCandidates;

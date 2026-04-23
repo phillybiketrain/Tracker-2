@@ -16,6 +16,9 @@
    *   departure_time: string,
    *   waypoints_count: number,
    *   recent_dates: string[],
+   *   linkage_state: 'unmigrated' | 'code_mismatch',
+   *   gothere_collaborator_code: string | null,
+   *   gothere_slug: string | null,
    *   recurrence: 'one-off' | 'weekly' | 'biweekly' | 'monthly',
    *   date: string,
    *   selected: boolean,
@@ -52,8 +55,16 @@
       gothereConfigured = !!data.gothere_configured;
       rows = (data.data || []).map((r) => ({
         ...r,
-        recurrence: guessRecurrence(r.recent_dates),
-        date: nextSensibleDate(r.recent_dates),
+        // For unmigrated rows, guess recurrence from scheduled dates.
+        // For code_mismatch rows, use the recurrence that was already
+        // saved on the route (the migration that set those fields is
+        // authoritative; don't second-guess it).
+        recurrence: r.linkage_state === 'code_mismatch'
+          ? (r.recurrence ?? 'one-off')
+          : guessRecurrence(r.recent_dates),
+        date: r.linkage_state === 'code_mismatch'
+          ? (r.date ?? nextSensibleDate(r.recent_dates))
+          : nextSensibleDate(r.recent_dates),
         selected: true,
         result: null,
       }));
@@ -159,10 +170,11 @@
       <a href="/admin/dashboard" class="text-sm text-warm-gray-600 hover:text-warm-gray-900">← Dashboard</a>
       <h1 class="text-3xl font-bold text-warm-gray-900 mt-2">Migrate routes to Go There</h1>
       <p class="text-warm-gray-600 mt-2">
-        Link each pre-existing PBT route to a Go There ride or ride-series.
-        The existing 4-char access code stays put — the legacy <code>/go</code> broadcast
-        path keeps working. The new Go There code is additive; give it to leaders
-        so they can broadcast from the Go There app.
+        Link each pre-existing PBT route to a Go There ride or ride-series —
+        and, for routes that are already linked but got a random Go There code,
+        retrofit the original PBT access code so leaders have one code across
+        both systems. The legacy <code>/go</code> broadcast path keeps working
+        either way.
       </p>
     </div>
 
@@ -184,7 +196,9 @@
       <div class="card text-center py-12">
         <div class="text-4xl mb-2">✅</div>
         <h2 class="text-xl font-semibold text-warm-gray-900">All caught up</h2>
-        <p class="text-warm-gray-600 mt-2">Every approved route is already linked to Go There.</p>
+        <p class="text-warm-gray-600 mt-2">
+          Every approved route is linked to Go There and its collaborator code matches the PBT access code.
+        </p>
       </div>
     {:else}
       <div class="card overflow-hidden">
@@ -199,9 +213,9 @@
                     on:change={(e) => { rows = rows.map((r) => ({ ...r, selected: e.target.checked })); }}
                   />
                 </th>
-                <th class="text-left px-4 py-3">Code</th>
+                <th class="text-left px-4 py-3">PBT code</th>
                 <th class="text-left px-4 py-3">Name</th>
-                <th class="text-left px-4 py-3">Departs</th>
+                <th class="text-left px-4 py-3">State</th>
                 <th class="text-left px-4 py-3">Recurrence</th>
                 <th class="text-left px-4 py-3">First date</th>
                 <th class="text-left px-4 py-3">Recent schedule</th>
@@ -215,10 +229,27 @@
                     <input type="checkbox" bind:checked={row.selected} disabled={running || row.result?.status === 'migrated'} />
                   </td>
                   <td class="px-4 py-3 font-mono text-warm-gray-900">{row.access_code}</td>
-                  <td class="px-4 py-3 text-warm-gray-900">{row.name}</td>
-                  <td class="px-4 py-3 text-warm-gray-600">{row.departure_time?.slice(0, 5)}</td>
+                  <td class="px-4 py-3 text-warm-gray-900">
+                    <div>{row.name}</div>
+                    <div class="text-xs text-warm-gray-500">{row.departure_time?.slice(0, 5)}</div>
+                  </td>
+                  <td class="px-4 py-3 text-xs">
+                    {#if row.linkage_state === 'code_mismatch'}
+                      <span class="inline-block px-2 py-1 rounded bg-amber-50 border border-amber-200 text-amber-900">
+                        Linked · code {row.gothere_collaborator_code} → {row.access_code}
+                      </span>
+                    {:else}
+                      <span class="inline-block px-2 py-1 rounded bg-warm-gray-100 border border-warm-gray-200 text-warm-gray-700">
+                        Not linked
+                      </span>
+                    {/if}
+                  </td>
                   <td class="px-4 py-3">
-                    <select bind:value={row.recurrence} disabled={running || row.result?.status === 'migrated'} class="px-2 py-1 border border-warm-gray-300 rounded text-sm">
+                    <select
+                      bind:value={row.recurrence}
+                      disabled={running || row.result?.status === 'migrated' || row.linkage_state === 'code_mismatch'}
+                      class="px-2 py-1 border border-warm-gray-300 rounded text-sm"
+                    >
                       <option value="one-off">One-off</option>
                       <option value="weekly">Weekly</option>
                       <option value="biweekly">Biweekly</option>
@@ -226,7 +257,12 @@
                     </select>
                   </td>
                   <td class="px-4 py-3">
-                    <input type="date" bind:value={row.date} disabled={running || row.result?.status === 'migrated'} class="px-2 py-1 border border-warm-gray-300 rounded text-sm" />
+                    <input
+                      type="date"
+                      bind:value={row.date}
+                      disabled={running || row.result?.status === 'migrated' || row.linkage_state === 'code_mismatch'}
+                      class="px-2 py-1 border border-warm-gray-300 rounded text-sm"
+                    />
                   </td>
                   <td class="px-4 py-3 text-xs text-warm-gray-500">
                     {#if row.recent_dates?.length}
