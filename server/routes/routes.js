@@ -1,6 +1,15 @@
 /**
  * Routes API
- * Handles creating routes and scheduling ride instances
+ * Handles creating routes (one-off rides) and — legacy — scheduling instances.
+ *
+ * As of Batch 2 of the GoThere integration, every route creation also
+ * provisions a matching GoThere ride (owned by the philly-bike-train account),
+ * publishes it to Neighborhood Commons, and mints the persistent 4-char
+ * collaborator code that the ride leader will redeem in the GoThere app.
+ *
+ * The legacy `access_code` and `ride_instances` rows are still created so
+ * the existing broadcast/manage UIs keep working; they'll be retired in a
+ * later batch once the handoff is complete.
  */
 
 import express from 'express';
@@ -9,8 +18,15 @@ import { z } from 'zod';
 import { generateRoutePreviewUrl } from '../utils/mapbox.js';
 import { upload, uploadToCloudinary, deleteFromCloudinary } from '../utils/upload.js';
 import { calculateRouteDistance } from '../utils/geo.js';
+import { buildGpxFile } from '../utils/gpx.js';
+import { toIsoWithOffset } from '../utils/timezone.js';
+import * as gothere from '../services/gothere.js';
 
 const router = express.Router();
+
+// PBT is Philadelphia-only for now; when regions gain their own timezones
+// this moves to the `regions` table.
+const PBT_TIMEZONE = 'America/New_York';
 
 // Validation schemas
 const CreateRouteSchema = z.object({
@@ -22,6 +38,9 @@ const CreateRouteSchema = z.object({
     address: z.string().optional()
   })).min(2),
   departure_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
+  // YYYY-MM-DD, interpreted in PBT_TIMEZONE. Combined with departure_time to
+  // produce the ISO-with-offset startsAt that GoThere wants.
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   creator_email: z.string().email().optional(),
   tag: z.enum(['community', 'regular', 'special']).optional(),
   region: z.string().optional() // Region slug (defaults to 'philly')
@@ -33,19 +52,25 @@ const ScheduleRideSchema = z.object({
 
 /**
  * POST /api/routes
- * Create a new route
+ * Create a new one-off route and publish it through GoThere → Commons.
+ *
+ * Saga on failure: if any GoThere call throws after a ride has been created
+ * on the GoThere side, we attempt a best-effort `deleteRide` rollback so we
+ * don't leave orphaned drafts floating around. Recurring routes will go
+ * through a sibling endpoint in Batch 3.
  */
 router.post('/', async (req, res) => {
+  let gothereRideId = null; // captured once we create the GoThere ride; used for rollback
+
   try {
-    // Validate input
     const data = CreateRouteSchema.parse(req.body);
 
-    // Get region_id (default to philly)
+    // Resolve region
     const regionSlug = data.region || 'philly';
-    const region = await queryOne(`
-      SELECT id FROM regions WHERE slug = $1
-    `, [regionSlug]);
-
+    const region = await queryOne(
+      `SELECT id FROM regions WHERE slug = $1`,
+      [regionSlug]
+    );
     if (!region) {
       return res.status(400).json({
         error: 'Invalid region',
@@ -53,25 +78,48 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Generate 4-letter access code
-    const accessCode = await queryOne(
-      'SELECT generate_access_code() as code'
-    );
+    // ── GoThere saga ────────────────────────────────────────────────────
+    // Build the ISO-with-offset startsAt GoThere's Zod validator requires.
+    const startsAt = toIsoWithOffset(data.date, data.departure_time, PBT_TIMEZONE);
 
-    // Generate static preview image URL
+    // First waypoint is the ride's "start location." Use its address if the
+    // creator captured one; otherwise fall back to the route name.
+    const first = data.waypoints[0];
+    const startLocationName = first.address || data.name;
+
+    const gtRide = await gothere.createRide({
+      name: data.name,
+      startsAt,
+      timezone: PBT_TIMEZONE,
+      startLocationName,
+      startAddress: first.address || undefined,
+      startLat: first.lat,
+      startLng: first.lng,
+      details: data.description || undefined,
+    });
+    gothereRideId = gtRide.id;
+
+    const gpx = buildGpxFile(data.waypoints, data.name);
+    await gothere.uploadRideRoute(gothereRideId, gpx);
+    await gothere.publishRide(gothereRideId);
+    const gtCode = await gothere.mintRideCollaboratorCode(gothereRideId);
+
+    // ── Local state ─────────────────────────────────────────────────────
+    // Legacy access_code is still used by the existing broadcast/manage UIs.
+    // Once those move fully to GoThere (Batch 6) we'll stop generating it.
+    const accessCode = await queryOne('SELECT generate_access_code() as code');
     const previewImageUrl = generateRoutePreviewUrl(data.waypoints);
-
-    // Calculate route distance
     const distanceMiles = calculateRouteDistance(data.waypoints);
 
-    // Create route (auto-approved)
     const route = await queryOne(`
       INSERT INTO routes (
         access_code, name, description, waypoints,
         departure_time, creator_email,
-        status, tag, region_id, preview_image_url, distance_miles
+        status, tag, region_id, preview_image_url, distance_miles,
+        date,
+        gothere_ride_id, gothere_slug, gothere_collaborator_code
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `, [
       accessCode.code,
@@ -84,30 +132,58 @@ router.post('/', async (req, res) => {
       data.tag || 'community',
       region.id,
       previewImageUrl,
-      distanceMiles
+      distanceMiles,
+      data.date,
+      gothereRideId,
+      gtRide.slug,
+      gtCode.code,
     ]);
 
-    console.log(`✅ Route created: ${route.name} (${route.access_code})`);
+    // Legacy: mirror the date into ride_instances so pages that query it
+    // (e.g. /[slug] "next ride") keep working during the transition.
+    // Removed in Batch 6.
+    await query(`
+      INSERT INTO ride_instances (route_id, date, status, region_id)
+      VALUES ($1, $2, 'scheduled', $3)
+      ON CONFLICT (route_id, date) DO NOTHING
+    `, [route.id, data.date, region.id]);
 
-    res.status(201).json({
-      success: true,
-      data: route // waypoints already parsed by pg driver
-    });
+    console.log(
+      `✅ Route created: ${route.name} — PBT ${route.access_code} / GoThere ${gtCode.code} @ ${gtRide.slug}`
+    );
+
+    res.status(201).json({ success: true, data: route });
 
   } catch (error) {
+    // Saga rollback: if we got as far as creating the GoThere ride,
+    // try to delete it so we don't leave an orphaned record.
+    if (gothereRideId) {
+      try {
+        await gothere.deleteRide(gothereRideId);
+        console.warn(`🗑️  Rolled back GoThere ride ${gothereRideId}`);
+      } catch (rollbackErr) {
+        console.error(
+          `⚠️  Failed to rollback GoThere ride ${gothereRideId}:`,
+          rollbackErr.message
+        );
+      }
+    }
+
     if (error instanceof z.ZodError) {
       console.error('❌ Validation error creating route:', JSON.stringify(error.errors, null, 2));
-      return res.status(400).json({
-        error: 'Validation error',
-        details: error.errors
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    if (error?.name === 'GoThereError') {
+      console.error(`❌ GoThere error (${error.code}): ${error.message}`);
+      return res.status(502).json({
+        error: 'Upstream failure',
+        message: 'Could not publish to Go There',
+        code: error.code,
       });
     }
 
     console.error('❌ Error creating route:', error);
-    res.status(500).json({
-      error: 'Failed to create route',
-      message: error.message
-    });
+    res.status(500).json({ error: 'Failed to create route', message: error.message });
   }
 });
 

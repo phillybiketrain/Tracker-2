@@ -10,8 +10,12 @@
   let description = '';
   let departureTime = '08:00';
   let routeTag = 'community';
-  let selectedDates = [];
-  let accessCode = '';
+  // Single date for this occurrence. Recurring rides go through a different
+  // flow (Batch 3) where the leader picks a schedule instead of a single date.
+  let selectedDate = null;
+  let accessCode = '';         // legacy PBT code (used for the manage page link)
+  let gothereCode = '';        // the 4-char code the ride leader enters in Go There
+  let gothereSlug = '';        // the Go There follower-page slug
   let routeId = '';
   let success = false;
   let creating = false;
@@ -72,8 +76,8 @@
       }
       activeStep = 3;
     } else if (activeStep === 3) {
-      if (selectedDates.length === 0) {
-        alert('Select at least one date');
+      if (!selectedDate) {
+        alert('Pick a date');
         return;
       }
       createRoute();
@@ -84,26 +88,23 @@
     creating = true;
 
     try {
-      // Build request body, omitting empty optional fields
-      const routePayload = {
-        name: routeName,
-        description: description || undefined,
-        waypoints,
-        departure_time: departureTime,
-        tag: routeTag
-      };
-
-      // Create route
+      // The server handles GoThere publish + code mint + Commons sync in one shot.
       const routeRes = await fetch(`${API_URL}/routes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(routePayload)
+        body: JSON.stringify({
+          name: routeName,
+          description: description || undefined,
+          waypoints,
+          departure_time: departureTime,
+          date: selectedDate,
+          tag: routeTag,
+        }),
       });
 
       const routeData = await routeRes.json();
 
       if (!routeData.success) {
-        // Include validation details if available
         const errorDetails = routeData.details
           ? routeData.details.map(d => `${d.path.join('.')}: ${d.message}`).join(', ')
           : '';
@@ -111,24 +112,9 @@
       }
 
       accessCode = routeData.data.access_code;
+      gothereCode = routeData.data.gothere_collaborator_code;
+      gothereSlug = routeData.data.gothere_slug;
       routeId = routeData.data.id;
-
-      // Schedule instances
-      const scheduleRes = await fetch(
-        `${API_URL}/routes/${accessCode}/schedule`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dates: selectedDates })
-        }
-      );
-
-      const scheduleData = await scheduleRes.json();
-
-      if (!scheduleData.success) {
-        throw new Error(scheduleData.error || 'Failed to schedule rides');
-      }
-
       success = true;
 
     } catch (error) {
@@ -229,12 +215,8 @@
 
   $: availableDates = getDatesForMonth(currentMonthOffset);
 
-  function toggleDate(date) {
-    if (selectedDates.includes(date)) {
-      selectedDates = selectedDates.filter(d => d !== date);
-    } else {
-      selectedDates = [...selectedDates, date];
-    }
+  function selectDate(date) {
+    selectedDate = selectedDate === date ? null : date;
   }
 </script>
 
@@ -252,30 +234,36 @@
           <div class="text-6xl mb-6">🎉</div>
           <h1 class="text-4xl font-bold mb-4 text-warm-gray-900">Route Created!</h1>
           <p class="text-warm-gray-600 mb-6 text-lg">
-            Your bike train route has been submitted for approval.
+            Your bike train is live and published.
           </p>
 
           <div class="bg-warm-gray-100 rounded-lg p-6 mb-8 max-w-md mx-auto">
-            <div class="text-sm text-warm-gray-600 mb-2">Your Access Code</div>
-            <div class="text-3xl font-bold font-mono text-warm-gray-900 mb-3">{accessCode}</div>
+            <div class="text-sm text-warm-gray-600 mb-2">Ride Leader Code</div>
+            <div class="text-5xl font-bold font-mono tracking-widest text-warm-gray-900 mb-3">{gothereCode}</div>
             <p class="text-xs text-warm-gray-600">
-              Save this code! You'll need it to manage your route and start broadcasting.
+              Give this code to your ride leader. They'll download the <strong>Go There</strong>
+              app, sign in, enter this code, and tap Broadcast on the day of the ride.
             </p>
           </div>
 
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/manage?code={accessCode}" class="btn btn-primary">
-              Manage This Route
-            </a>
-            <a href="/" class="btn btn-secondary">
-              Browse Routes
+            {#if gothereSlug}
+              <a href="https://gothere.bike/{gothereSlug}" target="_blank" rel="noopener" class="btn btn-primary">
+                View Follower Page
+              </a>
+            {/if}
+            <a href="/manage?code={accessCode}" class="btn btn-secondary">
+              Manage Route Content
             </a>
           </div>
 
-          <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-            <strong>What's next?</strong> An admin will review your route. Once approved,
-            it will appear in the browse page. You can add more ride dates or start
-            broadcasting from the Manage page using your access code.
+          <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 text-left max-w-2xl mx-auto">
+            <strong>What's next?</strong>
+            <ul class="mt-2 space-y-1 list-disc list-inside">
+              <li>The ride now shows up on the <a href="/" class="underline">home page</a> and anywhere else Go There rides are published.</li>
+              <li>On ride day, your leader opens the Go There app, enters <span class="font-mono">{gothereCode}</span>, and broadcasts their live position.</li>
+              <li>Followers can track the ride at <span class="font-mono">gothere.bike/{gothereSlug}</span>.</li>
+            </ul>
           </div>
         </div>
 
@@ -492,7 +480,7 @@
           {#if activeStep === 3}
             <div class="mt-6">
               <p class="text-sm text-warm-gray-600 mb-4">
-                Select the dates you want to run this route
+                Pick the date of this ride. (Recurring schedules coming soon.)
               </p>
 
               <!-- Month Navigation -->
@@ -522,13 +510,13 @@
                     {#each week as date}
                       {#if date}
                         <button
-                          on:click={() => toggleDate(date.value)}
-                          class="aspect-square flex flex-col items-center justify-center rounded border transition-all {selectedDates.includes(date.value)
+                          on:click={() => selectDate(date.value)}
+                          class="aspect-square flex flex-col items-center justify-center rounded border transition-all {selectedDate === date.value
                             ? 'bg-primary text-white border-primary'
                             : 'bg-white text-warm-gray-700 border-warm-gray-300 hover:border-primary hover:bg-warm-gray-50'}"
                           title={date.fullLabel}
                         >
-                          <span class="text-xs {selectedDates.includes(date.value) ? 'text-white/80' : 'text-warm-gray-500'}">{date.dayName}</span>
+                          <span class="text-xs {selectedDate === date.value ? 'text-white/80' : 'text-warm-gray-500'}">{date.dayName}</span>
                           <span class="text-lg font-bold">{date.day}</span>
                         </button>
                       {:else}
@@ -542,10 +530,10 @@
 
               <button
                 on:click={nextStep}
-                disabled={creating || selectedDates.length === 0}
+                disabled={creating || !selectedDate}
                 class="btn btn-primary w-full"
               >
-                {creating ? 'Creating Route...' : `Create Route with ${selectedDates.length} Ride${selectedDates.length !== 1 ? 's' : ''}`}
+                {creating ? 'Creating Route…' : 'Create Route'}
               </button>
             </div>
           {/if}
