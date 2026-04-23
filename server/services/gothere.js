@@ -109,6 +109,19 @@ async function request(method, path, { json, body, headers = {}, expectJson = tr
   return res.json();
 }
 
+/**
+ * Wrap a GPX string as multipart/form-data matching GoThere's upload
+ * expectation: a single `file` field with a `.gpx` filename.
+ * @param {string} gpxXml
+ * @returns {FormData}
+ */
+function gpxFormData(gpxXml) {
+  const form = new FormData();
+  const blob = new Blob([gpxXml], { type: 'application/gpx+xml' });
+  form.append('file', blob, 'route.gpx');
+  return form;
+}
+
 // ─── One-off rides ─────────────────────────────────────────────────────────
 
 /**
@@ -128,36 +141,34 @@ async function request(method, path, { json, body, headers = {}, expectJson = tr
  * @param {CreateRideInput} input
  * @returns {Promise<{ id: string, slug: string, status: 'draft' | 'published' }>}
  */
-export function createRide(input) {
-  return request('POST', '/rides', { json: input });
+export async function createRide(input) {
+  const res = await request('POST', '/rides', { json: input });
+  return res.ride;
 }
 
 /**
- * Upload the GPX (or TCX / FIT) that defines this ride's route.
- *
- * NOTE: the content-type sent here assumes GoThere accepts a raw GPX body.
- * If GoThere actually expects multipart/form-data with a `file` field,
- * swap this to use FormData. Verify against GoThere's OpenAPI when Batch 2
- * wires the real create flow.
+ * Upload the GPX that defines this ride's route. GoThere's endpoint expects
+ * multipart/form-data with a single `file` field whose original filename
+ * ends in `.gpx`.
  *
  * @param {string} rideId
- * @param {Buffer|Uint8Array|string} gpx
- * @returns {Promise<{ routeDistanceM: number, routePointsCount: number }>}
+ * @param {string} gpxXml
+ * @returns {Promise<{ ok: true, distanceM: number, pointCount: number }>}
  */
-export function uploadRideRoute(rideId, gpx) {
+export function uploadRideRoute(rideId, gpxXml) {
   return request('POST', `/rides/${rideId}/route`, {
-    body: gpx,
-    headers: { 'Content-Type': 'application/gpx+xml' },
+    body: gpxFormData(gpxXml),
   });
 }
 
 /**
  * Publish the ride to Neighborhood Commons. Ride must have a route attached.
  * @param {string} rideId
- * @returns {Promise<{ commonsEventId: string, commonsPublishedAt: string }>}
+ * @returns {Promise<{ id: string, slug: string, status: 'published' }>}
  */
-export function publishRide(rideId) {
-  return request('POST', `/rides/${rideId}/publish`);
+export async function publishRide(rideId) {
+  const res = await request('POST', `/rides/${rideId}/publish`);
+  return res.ride;
 }
 
 /**
@@ -200,28 +211,33 @@ export function deleteRide(rideId) {
  * @param {CreateSeriesInput} input
  * @returns {Promise<{ id: string, publicSlug: string, status: 'draft' | 'published' }>}
  */
-export function createSeries(input) {
-  return request('POST', '/ride-series', { json: input });
+export async function createSeries(input) {
+  const res = await request('POST', '/ride-series', { json: input });
+  return res.series;
 }
 
 /**
  * Upload the GPX that defines the shared route for every occurrence.
+ * Same multipart contract as `uploadRideRoute`.
+ *
  * @param {string} seriesId
- * @param {Buffer|Uint8Array|string} gpx
+ * @param {string} gpxXml
+ * @returns {Promise<{ ok: true, distanceM: number, pointCount: number }>}
  */
-export function uploadSeriesRoute(seriesId, gpx) {
+export function uploadSeriesRoute(seriesId, gpxXml) {
   return request('POST', `/ride-series/${seriesId}/route`, {
-    body: gpx,
-    headers: { 'Content-Type': 'application/gpx+xml' },
+    body: gpxFormData(gpxXml),
   });
 }
 
 /**
  * Publish the series to Commons — Commons materializes N instances.
  * @param {string} seriesId
+ * @returns {Promise<{ id: string, publicSlug: string, status: 'published' }>}
  */
-export function publishSeries(seriesId) {
-  return request('POST', `/ride-series/${seriesId}/publish`);
+export async function publishSeries(seriesId) {
+  const res = await request('POST', `/ride-series/${seriesId}/publish`);
+  return res.series;
 }
 
 /**

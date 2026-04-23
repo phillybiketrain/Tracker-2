@@ -10,18 +10,30 @@
   let description = '';
   let departureTime = '08:00';
   let routeTag = 'community';
-  // Single date for this occurrence. Recurring rides go through a different
-  // flow (Batch 3) where the leader picks a schedule instead of a single date.
+  // One-off by default; for recurring rides the leader picks a frequency
+  // below and the code they'll redeem on Go There is persistent across all
+  // occurrences.
+  let rideMode = 'one-off'; // 'one-off' | 'recurring'
+  let recurrenceFrequency = 'weekly'; // 'weekly' | 'biweekly' | 'monthly'
+  // For one-off this is THE date; for recurring it's the first-occurrence date.
   let selectedDate = null;
   let accessCode = '';         // legacy PBT code (used for the manage page link)
   let gothereCode = '';        // the 4-char code the ride leader enters in Go There
   let gothereSlug = '';        // the Go There follower-page slug
+  let createdMode = 'one-off'; // the mode the successfully-created ride used
+  let createdFrequency = '';   // recurrenceFrequency at create time, for the success screen
   let routeId = '';
   let success = false;
   let creating = false;
   let currentMonthOffset = 0; // 0 = current month, 1 = next month, etc.
   let routeInputMode = 'draw'; // 'draw' or 'gpx'
   let gpxFileName = null;
+
+  const FREQUENCY_LABELS = {
+    weekly: 'every week',
+    biweekly: 'every other week',
+    monthly: 'every month',
+  };
 
   function handleMapClick(coords) {
     waypoints = [...waypoints, coords];
@@ -99,6 +111,8 @@
           departure_time: departureTime,
           date: selectedDate,
           tag: routeTag,
+          // Only send recurrence when we're creating a series; omission means one-off.
+          ...(rideMode === 'recurring' ? { recurrence: recurrenceFrequency } : {}),
         }),
       });
 
@@ -115,6 +129,8 @@
       gothereCode = routeData.data.gothere_collaborator_code;
       gothereSlug = routeData.data.gothere_slug;
       routeId = routeData.data.id;
+      createdMode = rideMode;
+      createdFrequency = recurrenceFrequency;
       success = true;
 
     } catch (error) {
@@ -234,21 +250,29 @@
           <div class="text-6xl mb-6">🎉</div>
           <h1 class="text-4xl font-bold mb-4 text-warm-gray-900">Route Created!</h1>
           <p class="text-warm-gray-600 mb-6 text-lg">
-            Your bike train is live and published.
+            {createdMode === 'recurring'
+              ? `Your bike train is published and runs ${FREQUENCY_LABELS[createdFrequency]}.`
+              : 'Your bike train is live and published.'}
           </p>
 
           <div class="bg-warm-gray-100 rounded-lg p-6 mb-8 max-w-md mx-auto">
             <div class="text-sm text-warm-gray-600 mb-2">Ride Leader Code</div>
             <div class="text-5xl font-bold font-mono tracking-widest text-warm-gray-900 mb-3">{gothereCode}</div>
             <p class="text-xs text-warm-gray-600">
-              Give this code to your ride leader. They'll download the <strong>Go There</strong>
-              app, sign in, enter this code, and tap Broadcast on the day of the ride.
+              {#if createdMode === 'recurring'}
+                Give this code to your ride leader once. It works for every ride in the series —
+                they enter it in the <strong>Go There</strong> app and tap Broadcast on the day of each ride.
+                The code doesn't expire.
+              {:else}
+                Give this code to your ride leader. They'll download the <strong>Go There</strong>
+                app, sign in, enter this code, and tap Broadcast on the day of the ride.
+              {/if}
             </p>
           </div>
 
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
             {#if gothereSlug}
-              <a href="https://gothere.bike/{gothereSlug}" target="_blank" rel="noopener" class="btn btn-primary">
+              <a href={createdMode === 'recurring' ? `https://gothere.bike/series/${gothereSlug}` : `https://gothere.bike/${gothereSlug}`} target="_blank" rel="noopener" class="btn btn-primary">
                 View Follower Page
               </a>
             {/if}
@@ -260,9 +284,17 @@
           <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 text-left max-w-2xl mx-auto">
             <strong>What's next?</strong>
             <ul class="mt-2 space-y-1 list-disc list-inside">
-              <li>The ride now shows up on the <a href="/" class="underline">home page</a> and anywhere else Go There rides are published.</li>
-              <li>On ride day, your leader opens the Go There app, enters <span class="font-mono">{gothereCode}</span>, and broadcasts their live position.</li>
-              <li>Followers can track the ride at <span class="font-mono">gothere.bike/{gothereSlug}</span>.</li>
+              <li>The ride {createdMode === 'recurring' ? 'series' : ''} now shows up on the <a href="/" class="underline">home page</a> and anywhere else Go There rides are published.</li>
+              <li>
+                {#if createdMode === 'recurring'}
+                  Your leader opens Go There before each ride, enters <span class="font-mono">{gothereCode}</span>, and broadcasts. Same code every time.
+                {:else}
+                  On ride day, your leader opens the Go There app, enters <span class="font-mono">{gothereCode}</span>, and broadcasts their live position.
+                {/if}
+              </li>
+              <li>
+                Followers can track at <span class="font-mono">gothere.bike{createdMode === 'recurring' ? '/series' : ''}/{gothereSlug}</span>.
+              </li>
             </ul>
           </div>
         </div>
@@ -479,8 +511,49 @@
 
           {#if activeStep === 3}
             <div class="mt-6">
+              <!-- Mode toggle: one-off vs recurring -->
+              <div class="flex gap-2 mb-5">
+                <button
+                  class="flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-colors border {rideMode === 'one-off'
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-warm-gray-700 border-warm-gray-300 hover:border-primary'}"
+                  on:click={() => rideMode = 'one-off'}
+                  type="button"
+                >
+                  Just once
+                </button>
+                <button
+                  class="flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-colors border {rideMode === 'recurring'
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-warm-gray-700 border-warm-gray-300 hover:border-primary'}"
+                  on:click={() => rideMode = 'recurring'}
+                  type="button"
+                >
+                  On a schedule
+                </button>
+              </div>
+
+              {#if rideMode === 'recurring'}
+                <div class="mb-5">
+                  <label class="block text-sm font-medium text-warm-gray-900 mb-2">
+                    Repeats
+                  </label>
+                  <select
+                    bind:value={recurrenceFrequency}
+                    class="w-full px-4 py-3 border border-warm-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="weekly">Every week</option>
+                    <option value="biweekly">Every other week</option>
+                    <option value="monthly">Every month</option>
+                  </select>
+                  <p class="text-xs text-warm-gray-600 mt-2">
+                    Your ride leader gets a single 4-character code that works for every occurrence — no per-week setup.
+                  </p>
+                </div>
+              {/if}
+
               <p class="text-sm text-warm-gray-600 mb-4">
-                Pick the date of this ride. (Recurring schedules coming soon.)
+                {rideMode === 'recurring' ? 'Pick the first-ride date.' : 'Pick the date of this ride.'}
               </p>
 
               <!-- Month Navigation -->

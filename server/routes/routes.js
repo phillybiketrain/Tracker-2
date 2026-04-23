@@ -28,6 +28,11 @@ const router = express.Router();
 // this moves to the `regions` table.
 const PBT_TIMEZONE = 'America/New_York';
 
+// Commons' internal recurrence format (shared with GoThere). Kept verbatim
+// — no RRULE translation layer. Matches the CHECK constraint in
+// migrations/013_ride_series.sql.
+const RECURRENCE_REGEX = /^(daily|weekly|biweekly|monthly|ordinal_weekday:[1-5]:(monday|tuesday|wednesday|thursday|friday|saturday|sunday)|weekly_days:(mon|tue|wed|thu|fri|sat|sun)(,(mon|tue|wed|thu|fri|sat|sun))*)$/;
+
 // Validation schemas
 const CreateRouteSchema = z.object({
   name: z.string().min(1).max(200),
@@ -38,9 +43,15 @@ const CreateRouteSchema = z.object({
     address: z.string().optional()
   })).min(2),
   departure_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
-  // YYYY-MM-DD, interpreted in PBT_TIMEZONE. Combined with departure_time to
-  // produce the ISO-with-offset startsAt that GoThere wants.
+  // YYYY-MM-DD, interpreted in PBT_TIMEZONE. For one-off rides this is the
+  // date of the ride; for recurring, it's the first-occurrence date.
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // When set, the route is recurring and goes through GoThere's ride-series
+  // endpoints. When omitted, it's a one-off ride.
+  recurrence: z.string().regex(RECURRENCE_REGEX).optional(),
+  // Cap for bounded series; omit for ongoing (Commons auto-extends on a
+  // rolling horizon).
+  instance_count: z.number().int().min(1).max(260).optional(),
   creator_email: z.string().email().optional(),
   tag: z.enum(['community', 'regular', 'special']).optional(),
   region: z.string().optional() // Region slug (defaults to 'philly')
@@ -52,15 +63,19 @@ const ScheduleRideSchema = z.object({
 
 /**
  * POST /api/routes
- * Create a new one-off route and publish it through GoThere → Commons.
+ * Create a route and publish it through GoThere → Commons.
  *
- * Saga on failure: if any GoThere call throws after a ride has been created
- * on the GoThere side, we attempt a best-effort `deleteRide` rollback so we
- * don't leave orphaned drafts floating around. Recurring routes will go
- * through a sibling endpoint in Batch 3.
+ * Branches on `recurrence`:
+ *   - omitted  → one-off ride   → POST /rides on GoThere
+ *   - present  → recurring ride → POST /ride-series on GoThere (Commons
+ *                                 materializes N instances automatically)
+ *
+ * Saga on failure: if any GoThere call throws after the ride/series has
+ * been created, we attempt a best-effort delete so orphans don't pile up.
  */
 router.post('/', async (req, res) => {
-  let gothereRideId = null; // captured once we create the GoThere ride; used for rollback
+  let gothereRideId = null;    // set only in the one-off branch; used for rollback
+  let gothereSeriesId = null;  // set only in the recurring branch; used for rollback
 
   try {
     const data = CreateRouteSchema.parse(req.body);
@@ -78,35 +93,63 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // ── GoThere saga ────────────────────────────────────────────────────
-    // Build the ISO-with-offset startsAt GoThere's Zod validator requires.
-    const startsAt = toIsoWithOffset(data.date, data.departure_time, PBT_TIMEZONE);
-
-    // First waypoint is the ride's "start location." Use its address if the
-    // creator captured one; otherwise fall back to the route name.
+    // ── Shared ride content ─────────────────────────────────────────────
     const first = data.waypoints[0];
     const startLocationName = first.address || data.name;
-
-    const gtRide = await gothere.createRide({
-      name: data.name,
-      startsAt,
-      timezone: PBT_TIMEZONE,
-      startLocationName,
-      startAddress: first.address || undefined,
-      startLat: first.lat,
-      startLng: first.lng,
-      details: data.description || undefined,
-    });
-    gothereRideId = gtRide.id;
-
     const gpx = buildGpxFile(data.waypoints, data.name);
-    await gothere.uploadRideRoute(gothereRideId, gpx);
-    await gothere.publishRide(gothereRideId);
-    const gtCode = await gothere.mintRideCollaboratorCode(gothereRideId);
+
+    // Common shape of what we need back from GoThere, regardless of branch.
+    /** @type {{ slug: string, code: string }} */
+    let gtResult;
+
+    // ── GoThere saga ────────────────────────────────────────────────────
+    if (data.recurrence) {
+      // Recurring: one GoThere ride-series → Commons materializes instances.
+      const gtSeries = await gothere.createSeries({
+        name: data.name,
+        timezone: PBT_TIMEZONE,
+        startLocationName,
+        startAddress: first.address || undefined,
+        startLat: first.lat,
+        startLng: first.lng,
+        details: data.description || undefined,
+        recurrence: data.recurrence,
+        instanceCount: data.instance_count ?? undefined,
+        startsOn: data.date,
+        departureTimeLocal: data.departure_time,
+      });
+      gothereSeriesId = gtSeries.id;
+
+      await gothere.uploadSeriesRoute(gothereSeriesId, gpx);
+      await gothere.publishSeries(gothereSeriesId);
+      const gtCode = await gothere.mintSeriesCollaboratorCode(gothereSeriesId);
+      gtResult = { slug: gtSeries.publicSlug, code: gtCode.code };
+
+    } else {
+      // One-off: a single GoThere ride, one Commons event, per-occurrence code.
+      const startsAt = toIsoWithOffset(data.date, data.departure_time, PBT_TIMEZONE);
+
+      const gtRide = await gothere.createRide({
+        name: data.name,
+        startsAt,
+        timezone: PBT_TIMEZONE,
+        startLocationName,
+        startAddress: first.address || undefined,
+        startLat: first.lat,
+        startLng: first.lng,
+        details: data.description || undefined,
+      });
+      gothereRideId = gtRide.id;
+
+      await gothere.uploadRideRoute(gothereRideId, gpx);
+      await gothere.publishRide(gothereRideId);
+      const gtCode = await gothere.mintRideCollaboratorCode(gothereRideId);
+      gtResult = { slug: gtRide.slug, code: gtCode.code };
+    }
 
     // ── Local state ─────────────────────────────────────────────────────
     // Legacy access_code is still used by the existing broadcast/manage UIs.
-    // Once those move fully to GoThere (Batch 6) we'll stop generating it.
+    // Retired in Batch 6.
     const accessCode = await queryOne('SELECT generate_access_code() as code');
     const previewImageUrl = generateRoutePreviewUrl(data.waypoints);
     const distanceMiles = calculateRouteDistance(data.waypoints);
@@ -116,10 +159,10 @@ router.post('/', async (req, res) => {
         access_code, name, description, waypoints,
         departure_time, creator_email,
         status, tag, region_id, preview_image_url, distance_miles,
-        date,
-        gothere_ride_id, gothere_slug, gothere_collaborator_code
+        date, recurrence, instance_count,
+        gothere_ride_id, gothere_series_id, gothere_slug, gothere_collaborator_code
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *
     `, [
       accessCode.code,
@@ -134,38 +177,48 @@ router.post('/', async (req, res) => {
       previewImageUrl,
       distanceMiles,
       data.date,
+      data.recurrence || null,
+      data.instance_count ?? null,
       gothereRideId,
-      gtRide.slug,
-      gtCode.code,
+      gothereSeriesId,
+      gtResult.slug,
+      gtResult.code,
     ]);
 
-    // Legacy: mirror the date into ride_instances so pages that query it
-    // (e.g. /[slug] "next ride") keep working during the transition.
-    // Removed in Batch 6.
-    await query(`
-      INSERT INTO ride_instances (route_id, date, status, region_id)
-      VALUES ($1, $2, 'scheduled', $3)
-      ON CONFLICT (route_id, date) DO NOTHING
-    `, [route.id, data.date, region.id]);
+    // Legacy ride_instances mirror for the existing /[slug] "next ride" lookup.
+    // Only for one-offs; for recurring series, Commons is authoritative on
+    // instance dates and PBT doesn't need its own copy. Retired in Batch 6.
+    if (!data.recurrence) {
+      await query(`
+        INSERT INTO ride_instances (route_id, date, status, region_id)
+        VALUES ($1, $2, 'scheduled', $3)
+        ON CONFLICT (route_id, date) DO NOTHING
+      `, [route.id, data.date, region.id]);
+    }
 
+    const label = data.recurrence ? `series (${data.recurrence})` : 'one-off';
     console.log(
-      `✅ Route created: ${route.name} — PBT ${route.access_code} / GoThere ${gtCode.code} @ ${gtRide.slug}`
+      `✅ Route created ${label}: ${route.name} — PBT ${route.access_code} / GoThere ${gtResult.code} @ ${gtResult.slug}`
     );
 
     res.status(201).json({ success: true, data: route });
 
   } catch (error) {
-    // Saga rollback: if we got as far as creating the GoThere ride,
-    // try to delete it so we don't leave an orphaned record.
+    // Saga rollback: only one of these is set at a time (exclusive branch above).
     if (gothereRideId) {
       try {
         await gothere.deleteRide(gothereRideId);
         console.warn(`🗑️  Rolled back GoThere ride ${gothereRideId}`);
       } catch (rollbackErr) {
-        console.error(
-          `⚠️  Failed to rollback GoThere ride ${gothereRideId}:`,
-          rollbackErr.message
-        );
+        console.error(`⚠️  Failed to rollback GoThere ride ${gothereRideId}:`, rollbackErr.message);
+      }
+    }
+    if (gothereSeriesId) {
+      try {
+        await gothere.deleteSeries(gothereSeriesId);
+        console.warn(`🗑️  Rolled back GoThere series ${gothereSeriesId}`);
+      } catch (rollbackErr) {
+        console.error(`⚠️  Failed to rollback GoThere series ${gothereSeriesId}:`, rollbackErr.message);
       }
     }
 
