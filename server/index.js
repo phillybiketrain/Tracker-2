@@ -14,6 +14,7 @@ import dotenv from 'dotenv';
 import routesRouter from './routes/routes.js';
 import ridesRouter from './routes/rides.js';
 import adminRouter, { requireAdmin, activeSessions } from './routes/admin.js';
+import adminMigrationRouter from './routes/admin-migration.js';
 import subscriptionsRouter from './routes/subscriptions.js';
 import newslettersRouter from './routes/newsletters.js';
 
@@ -76,6 +77,7 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api/routes', routesRouter);
 app.use('/api/rides', ridesRouter);
+app.use('/api/admin/migration', adminMigrationRouter); // mount before /api/admin so it takes the more-specific path
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/newsletters', newslettersRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
