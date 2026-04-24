@@ -34,16 +34,27 @@ import { toIsoWithOffset } from './timezone.js';
 export function nextOccurrence(now, { recurrence, firstDate, departureTime, timezone }) {
   if (!firstDate) return null;
 
+  // Accept firstDate as either a 'YYYY-MM-DD' string (the canonical form)
+  // or a Date (which is what the pg driver hands back for DATE columns,
+  // and which easily trips up callers that forgot to normalize). Anything
+  // else is a bug.
+  const ymd = typeof firstDate === 'string'
+    ? firstDate
+    : firstDate instanceof Date
+      ? firstDate.toISOString().slice(0, 10)
+      : null;
+  if (!ymd) return null;
+
   if (!recurrence) {
-    const startsAt = new Date(toIsoWithOffset(firstDate, shortTime(departureTime), timezone));
-    return startsAt >= now ? { date: firstDate, startsAt } : null;
+    const startsAt = new Date(toIsoWithOffset(ymd, shortTime(departureTime), timezone));
+    return startsAt >= now ? { date: ymd, startsAt } : null;
   }
 
   // Iterative walk. Bound is generous — even daily at ~10 years = 3650
   // iterations, each of which is ~microseconds. Keeps the implementation
   // trivial vs. a closed-form fast-forward that has to second-guess DST.
   const MAX_ITERATIONS = 5000;
-  let cursor = firstDate;
+  let cursor = ymd;
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     const startsAt = new Date(toIsoWithOffset(cursor, shortTime(departureTime), timezone));
     if (startsAt >= now) return { date: cursor, startsAt };

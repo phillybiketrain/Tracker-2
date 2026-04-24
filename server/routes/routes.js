@@ -300,10 +300,18 @@ router.get('/by-slug/:slug', async (req, res) => {
       // (2) Derive from recurrence. Also works for one-offs (recurrence=null);
       //     nextOccurrence returns the single date if it's in the future, null
       //     otherwise.
+      //
+      // Normalize route.date once — the pg driver returns DATE columns as JS
+      // Date objects by default, but nextOccurrence / toIsoWithOffset expect
+      // a 'YYYY-MM-DD' string.
+      const firstDate = typeof route.date === 'string'
+        ? route.date
+        : route.date.toISOString().slice(0, 10);
+
       const now = new Date();
       const next = nextOccurrence(now, {
         recurrence: route.recurrence,
-        firstDate: typeof route.date === 'string' ? route.date : route.date.toISOString().slice(0, 10),
+        firstDate,
         departureTime: route.departure_time,
         timezone: PBT_TIMEZONE,
       });
@@ -330,7 +338,7 @@ router.get('/by-slug/:slug', async (req, res) => {
               new Date(cursor.getTime() + 60_000), // one minute past the previous occurrence
               {
                 recurrence: route.recurrence,
-                firstDate: route.date,
+                firstDate,
                 departureTime: route.departure_time,
                 timezone: PBT_TIMEZONE,
               }
