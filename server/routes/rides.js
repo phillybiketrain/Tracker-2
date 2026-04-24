@@ -189,7 +189,14 @@ router.get('/:id', async (req, res) => {
         r.departure_time,
 
         r.distance_miles,
-        r.start_location_icon_url
+        r.start_location_icon_url,
+        r.slug as route_slug,
+        -- Go There linkage: lets the /ride/[id] page redirect followers to
+        -- GoThere's follower surface without a second round-trip.
+        r.gothere_ride_id,
+        r.gothere_series_id,
+        r.gothere_slug,
+        r.gothere_collaborator_code
       FROM ride_instances ri
       JOIN routes r ON ri.route_id = r.id
       WHERE ri.id = $1

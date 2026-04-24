@@ -20,6 +20,7 @@ import { upload, uploadToCloudinary, deleteFromCloudinary } from '../utils/uploa
 import { calculateRouteDistance } from '../utils/geo.js';
 import { buildGpxFile } from '../utils/gpx.js';
 import { toIsoWithOffset } from '../utils/timezone.js';
+import { nextOccurrence, humanizeRecurrence } from '../utils/recurrence.js';
 import * as gothere from '../services/gothere.js';
 
 const router = express.Router();
@@ -242,7 +243,22 @@ router.post('/', async (req, res) => {
 
 /**
  * GET /api/routes/by-slug/:slug
- * Get route and its next ride by vanity URL slug
+ * Return a route by vanity slug, along with the next occurrence.
+ *
+ * "Next occurrence" is resolved in priority order:
+ *
+ *   1. A currently-live ride_instance (legacy socket.io broadcast path) —
+ *      this is authoritative because a leader is actively sending GPS.
+ *   2. If the route has `recurrence` + `date` populated (post-migration
+ *      routes), compute the next occurrence from the recurrence pattern.
+ *      No ride_instance row needs to exist — the schedule is derived.
+ *   3. Fall back to the legacy ride_instances lookup for pre-migration
+ *      routes that only have ad-hoc scheduled dates.
+ *
+ * `other_rides` keeps its legacy meaning (next few pre-scheduled dates)
+ * because the homepage + slug pages still render it. For recurring
+ * routes it now seeds a synthetic list of upcoming occurrences so the
+ * "next few" still shows something sensible.
  */
 router.get('/by-slug/:slug', async (req, res) => {
   try {
@@ -256,33 +272,107 @@ router.get('/by-slug/:slug', async (req, res) => {
       return res.status(404).json({ error: 'Route not found' });
     }
 
-    const nextRide = await queryOne(`
-      SELECT ri.*
-      FROM ride_instances ri
-      WHERE ri.route_id = $1
-        AND ri.date >= CURRENT_DATE
-        AND ri.status IN ('scheduled', 'live')
-      ORDER BY ri.date ASC
+    // (1) Any live ride_instance takes precedence — someone is broadcasting now.
+    const liveInstance = await queryOne(`
+      SELECT * FROM ride_instances
+      WHERE route_id = $1 AND status = 'live'
       LIMIT 1
     `, [route.id]);
 
-    const otherRides = await queryAll(`
-      SELECT ri.id, ri.date, ri.status
-      FROM ride_instances ri
-      WHERE ri.route_id = $1
-        AND ri.date >= CURRENT_DATE
-        AND ri.status IN ('scheduled', 'live')
-        ${nextRide ? `AND ri.id != $2` : ''}
-      ORDER BY ri.date ASC
-      LIMIT 10
-    `, nextRide ? [route.id, nextRide.id] : [route.id]);
+    let nextRide = null;
+    let otherRides = [];
+
+    if (liveInstance) {
+      nextRide = liveInstance;
+      // Keep behaviour symmetric — pull the usual "other upcoming" list too.
+      otherRides = await queryAll(`
+        SELECT ri.id, ri.date, ri.status
+        FROM ride_instances ri
+        WHERE ri.route_id = $1
+          AND ri.date >= CURRENT_DATE
+          AND ri.status IN ('scheduled', 'live')
+          AND ri.id != $2
+        ORDER BY ri.date ASC
+        LIMIT 10
+      `, [route.id, liveInstance.id]);
+
+    } else if (route.date) {
+      // (2) Derive from recurrence. Also works for one-offs (recurrence=null);
+      //     nextOccurrence returns the single date if it's in the future, null
+      //     otherwise.
+      const now = new Date();
+      const next = nextOccurrence(now, {
+        recurrence: route.recurrence,
+        firstDate: typeof route.date === 'string' ? route.date : route.date.toISOString().slice(0, 10),
+        departureTime: route.departure_time,
+        timezone: PBT_TIMEZONE,
+      });
+
+      if (next) {
+        nextRide = {
+          // Shape matches what the frontend expects from a ride_instance
+          // row. `id` is null because no instance has been materialized
+          // in PBT's own DB — the schedule lives on the series now.
+          id: null,
+          date: next.date,
+          status: 'scheduled',
+          starts_at: next.startsAt.toISOString(),
+          current_location: null,
+        };
+
+        // "Other rides" for recurring series = a handful of upcoming
+        // occurrences projected forward from next. Skip for one-offs,
+        // which only have the one date.
+        if (route.recurrence) {
+          let cursor = next.startsAt;
+          for (let i = 0; i < 8; i++) {
+            const step = nextOccurrence(
+              new Date(cursor.getTime() + 60_000), // one minute past the previous occurrence
+              {
+                recurrence: route.recurrence,
+                firstDate: route.date,
+                departureTime: route.departure_time,
+                timezone: PBT_TIMEZONE,
+              }
+            );
+            if (!step || step.date === next.date) break;
+            otherRides.push({ id: null, date: step.date, status: 'scheduled' });
+            cursor = step.startsAt;
+          }
+        }
+      }
+
+    } else {
+      // (3) Legacy fallback — route predates migration 012/013.
+      nextRide = await queryOne(`
+        SELECT ri.*
+        FROM ride_instances ri
+        WHERE ri.route_id = $1
+          AND ri.date >= CURRENT_DATE
+          AND ri.status IN ('scheduled', 'live')
+        ORDER BY ri.date ASC
+        LIMIT 1
+      `, [route.id]);
+
+      otherRides = await queryAll(`
+        SELECT ri.id, ri.date, ri.status
+        FROM ride_instances ri
+        WHERE ri.route_id = $1
+          AND ri.date >= CURRENT_DATE
+          AND ri.status IN ('scheduled', 'live')
+          ${nextRide ? `AND ri.id != $2` : ''}
+        ORDER BY ri.date ASC
+        LIMIT 10
+      `, nextRide ? [route.id, nextRide.id] : [route.id]);
+    }
 
     res.json({
       success: true,
       data: {
         ...route,
+        recurrence_label: humanizeRecurrence(route.recurrence),
         next_ride: nextRide || null,
-        other_rides: otherRides
+        other_rides: otherRides,
       }
     });
   } catch (error) {

@@ -85,6 +85,13 @@
   }
 
   $: isLive = nextRide && nextRide.status === 'live';
+  // Go There follower URL if this route has been migrated — replaces the
+  // in-page socket.io tracker when available.
+  $: goThereUrl = route?.gothere_slug
+    ? (route.gothere_series_id
+        ? `https://gothere.bike/series/${route.gothere_slug}`
+        : `https://gothere.bike/${route.gothere_slug}`)
+    : null;
   $: showSpecialHero = new Date(SPECIAL_DATE) > new Date();
 </script>
 
@@ -257,7 +264,11 @@
                 <div class="text-lg font-bold text-warm-gray-900">{formatDate(nextRide.date)}</div>
                 <div class="text-sm text-warm-gray-600">{formatTime(route.departure_time)}</div>
               </div>
-              {#if isLive}
+              {#if isLive && goThereUrl}
+                <a href={goThereUrl} class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow transition-colors">
+                  Track Live
+                </a>
+              {:else if isLive}
                 <button on:click={startTracking} class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow transition-colors">
                   Track Live
                 </button>

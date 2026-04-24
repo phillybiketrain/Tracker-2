@@ -112,6 +112,16 @@
 
   $: hero = route?.hero || null;
   $: isLive = nextRide && nextRide.status === 'live';
+  // URL for the Go There follower page — used by the Track Live CTA instead of
+  // starting a PBT-local socket.io broadcast. Series routes render their full
+  // schedule + route map at /series/<slug>; one-off rides live at /<slug>.
+  // Null means this route hasn't been migrated yet — fall back to the legacy
+  // in-page socket.io tracker.
+  $: goThereUrl = route?.gothere_slug
+    ? (route.gothere_series_id
+        ? `https://gothere.bike/series/${route.gothere_slug}`
+        : `https://gothere.bike/${route.gothere_slug}`)
+    : null;
 </script>
 
 <svelte:head>
@@ -262,10 +272,18 @@
 
           <!-- CTA -->
           <div class="text-center">
-            {#if isLive}
+            {#if isLive && goThereUrl}
+              <a href={goThereUrl} class="inline-block px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-xl shadow-lg transition-colors">
+                Track Live Now
+              </a>
+            {:else if isLive}
               <button on:click={startTracking} class="inline-block px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-xl shadow-lg transition-colors">
                 Track Live Now
               </button>
+            {:else if nextRide && goThereUrl}
+              <a href={goThereUrl} class="inline-block px-6 py-3 bg-white/10 hover:bg-white/15 rounded-xl text-white text-sm transition-colors">
+                View route & schedule on Go There →
+              </a>
             {:else if nextRide}
               <div class="inline-block px-6 py-3 bg-white/10 rounded-xl text-warm-gray-400 text-sm">
                 Check back on ride day to track live
@@ -374,10 +392,18 @@
             </div>
           </div>
 
-          {#if isLive}
+          {#if isLive && goThereUrl}
+            <a href={goThereUrl} class="btn btn-primary w-full py-4 text-lg block text-center">
+              Track Live
+            </a>
+          {:else if isLive}
             <button on:click={startTracking} class="btn btn-primary w-full py-4 text-lg">
               Track Live
             </button>
+          {:else if goThereUrl}
+            <a href={goThereUrl} class="btn btn-secondary w-full py-4 text-lg block text-center">
+              View on Go There
+            </a>
           {/if}
 
           <a href="/browse" class="btn btn-secondary w-full block text-center">
