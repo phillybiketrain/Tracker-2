@@ -265,7 +265,7 @@
                 <div class="text-sm text-warm-gray-600">{formatTime(route.departure_time)}</div>
               </div>
               {#if isLive && goThereUrl}
-                <a href={goThereUrl} class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow transition-colors">
+                <a href={goThereUrl} class="btn btn-gothere shadow">
                   Track Live
                 </a>
               {:else if isLive}

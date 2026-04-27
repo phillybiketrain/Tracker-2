@@ -272,8 +272,8 @@
 
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
             {#if gothereSlug}
-              <a href={createdMode === 'recurring' ? `https://gothere.bike/series/${gothereSlug}` : `https://gothere.bike/${gothereSlug}`} target="_blank" rel="noopener" class="btn btn-primary">
-                View Follower Page
+              <a href={createdMode === 'recurring' ? `https://gothere.bike/series/${gothereSlug}` : `https://gothere.bike/${gothereSlug}`} target="_blank" rel="noopener" class="btn btn-gothere">
+                View on Go There
               </a>
             {/if}
             <a href="/manage?code={accessCode}" class="btn btn-secondary">

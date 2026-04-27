@@ -49,6 +49,19 @@
     @apply bg-red-400 text-white hover:opacity-90;
   }
 
+  /* Go There brand button. The lime + near-black text matches the colors
+   * used across gothere.bike's landing site so a "View on Go There" CTA
+   * reads as obviously cross-brand rather than as another PBT button. */
+  .btn-gothere {
+    background-color: #D4FF3A;
+    color: #0A0A0B;
+    font-weight: 700;
+  }
+
+  .btn-gothere:hover {
+    background-color: #B8E022;
+  }
+
   .input {
     @apply px-4 py-3 bg-white focus:outline-none transition-colors;
     border: 2px solid #D9D5CE;

@@ -273,7 +273,7 @@
           <!-- CTA -->
           <div class="text-center">
             {#if isLive && goThereUrl}
-              <a href={goThereUrl} class="inline-block px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-xl shadow-lg transition-colors">
+              <a href={goThereUrl} class="btn btn-gothere inline-block px-8 py-4 text-lg shadow-lg">
                 Track Live Now
               </a>
             {:else if isLive}
@@ -281,8 +281,8 @@
                 Track Live Now
               </button>
             {:else if nextRide && goThereUrl}
-              <a href={goThereUrl} class="inline-block px-6 py-3 bg-white/10 hover:bg-white/15 rounded-xl text-white text-sm transition-colors">
-                View route & schedule on Go There →
+              <a href={goThereUrl} class="btn btn-gothere inline-block">
+                View on Go There →
               </a>
             {:else if nextRide}
               <div class="inline-block px-6 py-3 bg-white/10 rounded-xl text-warm-gray-400 text-sm">
@@ -393,7 +393,7 @@
           </div>
 
           {#if isLive && goThereUrl}
-            <a href={goThereUrl} class="btn btn-primary w-full py-4 text-lg block text-center">
+            <a href={goThereUrl} class="btn btn-gothere w-full py-4 text-lg block text-center">
               Track Live
             </a>
           {:else if isLive}
@@ -401,7 +401,7 @@
               Track Live
             </button>
           {:else if goThereUrl}
-            <a href={goThereUrl} class="btn btn-secondary w-full py-4 text-lg block text-center">
+            <a href={goThereUrl} class="btn btn-gothere w-full py-4 text-lg block text-center">
               View on Go There
             </a>
           {/if}
