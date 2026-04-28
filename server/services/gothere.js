@@ -52,14 +52,14 @@ export function isConfigured() {
 }
 
 /**
- * Build the public follower URL for a given ride or series slug.
- * @param {{ kind: 'ride' | 'series', slug: string }} ref
+ * Build the public follower URL for a given slug. Post-redesign, Go There
+ * resolves both rides and series at the bare /<slug> path — `kind` is
+ * accepted for backwards compatibility with older callers but ignored.
+ * @param {{ kind?: 'ride' | 'series', slug: string }} ref
  * @returns {string}
  */
-export function publicUrl({ kind, slug }) {
-  return kind === 'series'
-    ? `${PUBLIC_BASE}/series/${slug}`
-    : `${PUBLIC_BASE}/${slug}`;
+export function publicUrl({ slug }) {
+  return `${PUBLIC_BASE}/${slug}`;
 }
 
 /**

@@ -4,6 +4,7 @@
   import Markdown from '$lib/components/Markdown.svelte';
   import { io } from 'socket.io-client';
   import { API_URL, SOCKET_URL } from '$lib/config.js';
+  import { goThereFollowerUrl } from '$lib/utils/gothere.js';
 
   let route = null;
   let nextRide = null;
@@ -86,12 +87,9 @@
 
   $: isLive = nextRide && nextRide.status === 'live';
   // Go There follower URL if this route has been migrated — replaces the
-  // in-page socket.io tracker when available.
-  $: goThereUrl = route?.gothere_slug
-    ? (route.gothere_series_id
-        ? `https://gothere.bike/series/${route.gothere_slug}`
-        : `https://gothere.bike/${route.gothere_slug}`)
-    : null;
+  // in-page socket.io tracker when available. See $lib/utils/gothere.js for
+  // the back-compat fallback.
+  $: goThereUrl = route?.gothere_slug ? goThereFollowerUrl(route.gothere_slug) : null;
   $: showSpecialHero = new Date(SPECIAL_DATE) > new Date();
 </script>
 

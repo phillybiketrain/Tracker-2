@@ -29,6 +29,17 @@
 
   let running = false;
 
+  // ── Refresh Go There slugs (separate flow at the bottom of the page) ──
+  // After Go There re-issues 6-char publicSlugs for every existing series,
+  // PBT's local `gothere_slug` column needs to be updated. The admin pastes
+  // the response from Go There's `/admin/reslug-series` here and we POST it
+  // to /api/admin/migration/refresh-slugs on this server.
+  let refreshJson = '';
+  let refreshing = false;
+  let refreshError = '';
+  /** @type {{ updated: number, results: Array<{ seriesId: string, oldSlug?: string, newSlug: string, accessCode?: string, name?: string, status: string }> } | null} */
+  let refreshSummary = null;
+
   onMount(async () => {
     token = localStorage.getItem('admin_token');
     if (!token) {
@@ -153,10 +164,51 @@
   }
 
   function statusColor(s) {
-    return s === 'migrated' ? 'text-green-700 bg-green-50 border-green-200'
-      : s === 'skipped'  ? 'text-warm-gray-700 bg-warm-gray-50 border-warm-gray-200'
-      : s === 'dry-run'  ? 'text-blue-700 bg-blue-50 border-blue-200'
-      :                    'text-red-700 bg-red-50 border-red-200';
+    return s === 'migrated' || s === 'updated' ? 'text-green-700 bg-green-50 border-green-200'
+      : s === 'skipped' || s === 'unchanged'   ? 'text-warm-gray-700 bg-warm-gray-50 border-warm-gray-200'
+      : s === 'dry-run'                        ? 'text-blue-700 bg-blue-50 border-blue-200'
+      : s === 'no_local_row'                   ? 'text-amber-700 bg-amber-50 border-amber-200'
+      :                                          'text-red-700 bg-red-50 border-red-200';
+  }
+
+  async function applyRefresh() {
+    refreshError = '';
+    refreshSummary = null;
+    let payload;
+    try {
+      payload = JSON.parse(refreshJson);
+    } catch (e) {
+      refreshError = 'Pasted text is not valid JSON';
+      return;
+    }
+    if (!payload || !Array.isArray(payload.results) || payload.results.length === 0) {
+      refreshError = 'Expected { results: [...] } from Go There — see /admin/reslug-series response';
+      return;
+    }
+
+    refreshing = true;
+    try {
+      const res = await fetch(`${API_URL}/admin/migration/refresh-slugs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Refresh failed');
+      refreshSummary = data;
+      // Once any slugs have changed, the unmigrated/mismatch list might have
+      // gone stale (the routes table doesn't show gothere_slug, but reload
+      // anyway to keep the page coherent).
+      await loadUnmigrated();
+    } catch (err) {
+      refreshError = err.message;
+      console.error(err);
+    } finally {
+      refreshing = false;
+    }
   }
 </script>
 
@@ -309,5 +361,89 @@
         </p>
       </div>
     {/if}
+
+    <!-- ── Refresh Go There slugs ──
+         When Go There re-issues series slugs (e.g. their `/admin/reslug-series`
+         migration), the publicSlug values in our local `routes.gothere_slug`
+         column are stale and the Track-Live URLs we build will only work via
+         their /series/<old-slug> back-compat redirect. Paste the response
+         payload here and we update each row by `gothere_series_id`. -->
+    <details class="mt-10 card">
+      <summary class="cursor-pointer font-semibold text-warm-gray-900">
+        Refresh Go There slugs
+      </summary>
+
+      <p class="text-sm text-warm-gray-600 mt-3">
+        Paste the response from Go There's <code>POST /admin/reslug-series</code> below
+        — we'll match each <code>seriesId</code> against our linked routes and update
+        <code>gothere_slug</code>. Series in the response that we don't track locally are
+        reported as <em>no_local_row</em> and skipped.
+      </p>
+
+      <textarea
+        bind:value={refreshJson}
+        rows="10"
+        placeholder={'{\n  "migrated": 7,\n  "results": [\n    { "seriesId": "…", "oldSlug": "…", "newSlug": "abcdef", "commonsUpdated": true }\n  ]\n}'}
+        class="mt-4 w-full font-mono text-xs px-3 py-2 border border-warm-gray-300 rounded resize-y"
+        disabled={refreshing}
+      ></textarea>
+
+      {#if refreshError}
+        <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+          {refreshError}
+        </div>
+      {/if}
+
+      <div class="mt-4 flex flex-wrap gap-3 items-center">
+        <button
+          class="btn btn-primary"
+          disabled={refreshing || !refreshJson.trim()}
+          on:click={applyRefresh}
+        >
+          {refreshing ? 'Refreshing…' : 'Apply slug refresh'}
+        </button>
+        {#if refreshSummary}
+          <span class="text-sm text-warm-gray-700">
+            {refreshSummary.updated} updated · {refreshSummary.results.length - refreshSummary.updated} no-op
+          </span>
+        {/if}
+      </div>
+
+      {#if refreshSummary}
+        <div class="mt-4 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-warm-gray-50 text-warm-gray-700">
+              <tr>
+                <th class="text-left px-4 py-2">Series</th>
+                <th class="text-left px-4 py-2">Old → New</th>
+                <th class="text-left px-4 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-warm-gray-100">
+              {#each refreshSummary.results as r}
+                <tr>
+                  <td class="px-4 py-2">
+                    {#if r.name}
+                      <span class="font-medium text-warm-gray-900">{r.name}</span>
+                      <span class="font-mono text-xs text-warm-gray-500 ml-2">{r.accessCode}</span>
+                    {:else}
+                      <span class="font-mono text-xs text-warm-gray-500">{r.seriesId}</span>
+                    {/if}
+                  </td>
+                  <td class="px-4 py-2 font-mono text-xs">
+                    {r.oldSlug ?? '—'} → {r.newSlug}
+                  </td>
+                  <td class="px-4 py-2">
+                    <span class="inline-block px-2 py-1 rounded border text-xs {statusColor(r.status)}">
+                      {r.status}
+                    </span>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
+    </details>
   </div>
 </div>

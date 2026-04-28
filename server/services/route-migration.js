@@ -263,6 +263,74 @@ async function retrofitCodeOnly(route) {
 }
 
 /**
+ * Apply a Go There `/admin/reslug-series` response to our local rows.
+ *
+ * Go There's series-URL redesign collapsed `/series/<12-char>` to bare
+ * `/<6-char>`; their migration re-issued 6-char slugs for every existing
+ * series and we have to mirror those into our `routes.gothere_slug`
+ * column. Match by `gothere_series_id` (= response.results[].seriesId).
+ *
+ * @param {{ results: Array<{ seriesId: string, oldSlug?: string, newSlug: string, commonsUpdated?: boolean }> }} payload
+ * @returns {Promise<{
+ *   updated: number,
+ *   results: Array<{
+ *     seriesId: string,
+ *     oldSlug?: string,
+ *     newSlug: string,
+ *     accessCode?: string,
+ *     name?: string,
+ *     status: 'updated' | 'unchanged' | 'no_local_row',
+ *   }>
+ * }>}
+ */
+export async function refreshSlugs(payload) {
+  if (!payload || !Array.isArray(payload.results)) {
+    throw new TypeError('payload.results must be an array');
+  }
+
+  const results = [];
+  for (const entry of payload.results) {
+    const { seriesId, oldSlug, newSlug } = entry || {};
+
+    const before = await queryOne(
+      `SELECT access_code, name, gothere_slug FROM routes WHERE gothere_series_id = $1`,
+      [seriesId]
+    );
+    if (!before) {
+      // Go There has a series we don't track locally — log and move on.
+      results.push({ seriesId, oldSlug, newSlug, status: 'no_local_row' });
+      continue;
+    }
+
+    if (before.gothere_slug === newSlug) {
+      results.push({
+        seriesId, oldSlug, newSlug,
+        accessCode: before.access_code,
+        name: before.name,
+        status: 'unchanged',
+      });
+      continue;
+    }
+
+    await query(
+      `UPDATE routes SET gothere_slug = $1 WHERE gothere_series_id = $2`,
+      [newSlug, seriesId]
+    );
+    results.push({
+      seriesId, oldSlug, newSlug,
+      accessCode: before.access_code,
+      name: before.name,
+      status: 'updated',
+    });
+  }
+
+  return {
+    updated: results.filter((r) => r.status === 'updated').length,
+    results,
+  };
+}
+
+/**
  * List routes that still need work: either not yet linked to Go There, or
  * linked but with a GoThere collaborator code that doesn't match the PBT
  * access_code (so the admin page can offer a one-click retrofit).

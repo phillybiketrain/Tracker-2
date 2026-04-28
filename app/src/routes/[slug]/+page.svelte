@@ -6,6 +6,7 @@
   import { io } from 'socket.io-client';
   import { API_URL, SOCKET_URL } from '$lib/config.js';
   import { downloadGpx } from '$lib/utils/gpx.js';
+  import { goThereFollowerUrl } from '$lib/utils/gothere.js';
 
   let route = null;
   let nextRide = null;
@@ -113,15 +114,13 @@
   $: hero = route?.hero || null;
   $: isLive = nextRide && nextRide.status === 'live';
   // URL for the Go There follower page — used by the Track Live CTA instead of
-  // starting a PBT-local socket.io broadcast. Series routes render their full
-  // schedule + route map at /series/<slug>; one-off rides live at /<slug>.
-  // Null means this route hasn't been migrated yet — fall back to the legacy
-  // in-page socket.io tracker.
-  $: goThereUrl = route?.gothere_slug
-    ? (route.gothere_series_id
-        ? `https://gothere.bike/series/${route.gothere_slug}`
-        : `https://gothere.bike/${route.gothere_slug}`)
-    : null;
+  // starting a PBT-local socket.io broadcast. Both rides and series resolve at
+  // the bare /<slug> path on Go There post-redesign; the helper handles the
+  // back-compat /series/ fallback for any row whose slug hasn't been refreshed
+  // yet (admin/migrate → "Refresh Go There slugs").
+  // Null means this route hasn't been migrated to Go There — fall through to
+  // the legacy socket.io tracker.
+  $: goThereUrl = route?.gothere_slug ? goThereFollowerUrl(route.gothere_slug) : null;
 </script>
 
 <svelte:head>

@@ -3,6 +3,7 @@
   import Map from '$lib/components/Map.svelte';
   import GpxUpload from '$lib/components/GpxUpload.svelte';
   import { API_URL } from '$lib/config.js';
+  import { goThereFollowerUrl } from '$lib/utils/gothere.js';
 
   let activeStep = 1; // 1 = details, 2 = map, 3 = schedule
   let waypoints = [];
@@ -272,7 +273,7 @@
 
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
             {#if gothereSlug}
-              <a href={createdMode === 'recurring' ? `https://gothere.bike/series/${gothereSlug}` : `https://gothere.bike/${gothereSlug}`} target="_blank" rel="noopener" class="btn btn-gothere">
+              <a href={goThereFollowerUrl(gothereSlug)} target="_blank" rel="noopener" class="btn btn-gothere">
                 View on Go There
               </a>
             {/if}
@@ -293,7 +294,7 @@
                 {/if}
               </li>
               <li>
-                Followers can track at <span class="font-mono">gothere.bike{createdMode === 'recurring' ? '/series' : ''}/{gothereSlug}</span>.
+                Followers can track at <span class="font-mono">{goThereFollowerUrl(gothereSlug).replace(/^https?:\/\//, '')}</span>.
               </li>
             </ul>
           </div>

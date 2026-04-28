@@ -5,6 +5,7 @@
   import Markdown from '$lib/components/Markdown.svelte';
   import { io } from 'socket.io-client';
   import { API_URL, SOCKET_URL } from '$lib/config.js';
+  import { goThereFollowerUrl } from '$lib/utils/gothere.js';
 
   let ride = null;
   let loading = true;
@@ -34,15 +35,10 @@
         // (map, route, leader position, share link) that the rest of Go There
         // users are already on.
         //
-        // Prefer the per-ride slug when available; for recurring-series
-        // occurrences where only the series slug is on the parent route,
-        // fall back to the series URL (Go There's series page 302s onward to
-        // the current live broadcast if one exists).
+        // Both rides and series live at the bare /<slug> path post-redesign;
+        // see $lib/utils/gothere.js for the back-compat fallback.
         if (ride.gothere_slug) {
-          const target = ride.gothere_series_id
-            ? `https://gothere.bike/series/${ride.gothere_slug}`
-            : `https://gothere.bike/${ride.gothere_slug}`;
-          window.location.replace(target);
+          window.location.replace(goThereFollowerUrl(ride.gothere_slug));
           return;
         }
       }
