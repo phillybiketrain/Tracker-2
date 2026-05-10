@@ -146,6 +146,9 @@
           <a href="/browse" class="btn btn-secondary text-lg px-8 py-4">
             Browse All Rides
           </a>
+          <a href="/map" class="btn btn-secondary text-lg px-8 py-4">
+            Map View
+          </a>
         </div>
       </div>
 
