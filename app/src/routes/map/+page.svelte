@@ -19,7 +19,7 @@
   <div class="rounded-2xl overflow-hidden shadow-lg border border-warm-gray-200 bg-white">
     <iframe
       title="All rides map"
-      src="https://gothere.bike/map?date={mapDate}"
+      src="https://api.gothere.bike/map?date={mapDate}"
       style="width:100%; height:75vh; min-height:600px; border:0; display:block;"
       loading="lazy"
     ></iframe>
