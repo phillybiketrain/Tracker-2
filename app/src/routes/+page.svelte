@@ -23,9 +23,10 @@
       if (data.success) {
         rides = data.data;
 
-        // Group rides by route
+        // Group rides by route — only official PBT rides are shown on the homepage.
         const routeMap = new Map();
         rides.forEach(ride => {
+          if (!ride.is_official) return;
           const routeId = ride.route_id;
           if (!routeMap.has(routeId)) {
             routeMap.set(routeId, {
@@ -47,8 +48,7 @@
         const allRoutes = Array.from(routeMap.values());
         totalRoutes = allRoutes.length;
 
-        // Get featured routes (top 6 for hero)
-        featuredRoutes = allRoutes.slice(0, 6);
+        featuredRoutes = allRoutes;
 
         // Paginate remaining routes
         const startIdx = (currentPage - 1) * pageSize;

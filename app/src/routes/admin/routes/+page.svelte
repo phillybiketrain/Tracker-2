@@ -67,6 +67,7 @@
       description: route.description,
       departure_time: route.departure_time,
       tag: route.tag,
+      is_official: !!route.is_official,
       slug: route.slug || '',
       access_code: route.access_code,
       hero_enabled: !!(route.hero),
@@ -128,6 +129,7 @@
           description: editing.description,
           departure_time: editing.departure_time,
           tag: editing.tag,
+          is_official: editing.is_official,
           slug: editing.slug,
           hero: editing.hero_enabled ? {
             partner_name: editing.hero_partner_name || undefined,
@@ -661,6 +663,14 @@
             </div>
 
             <div>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" bind:checked={editing.is_official} disabled={saving} class="rounded" />
+                <span class="text-sm font-medium text-warm-gray-900">Official PBT ride</span>
+                <span class="text-xs text-warm-gray-500">(featured on the homepage)</span>
+              </label>
+            </div>
+
+            <div>
               <label class="block text-sm font-medium text-warm-gray-900 mb-2">
                 Vanity URL Slug
               </label>
@@ -1036,6 +1046,11 @@
                       <span class="px-2 py-0.5 text-xs bg-warm-gray-100 text-warm-gray-700 rounded">
                         {route.tag}
                       </span>
+                      {#if route.is_official}
+                        <span class="px-2 py-0.5 text-xs font-medium bg-primary text-white rounded">
+                          Official PBT
+                        </span>
+                      {/if}
                     </div>
 
                     {#if route.description}

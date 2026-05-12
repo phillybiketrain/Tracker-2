@@ -146,6 +146,7 @@ router.get('/', async (req, res) => {
 
         r.distance_miles,
         r.tag,
+        r.is_official,
         r.preview_image_url,
         r.start_location_icon_url,
         r.slug as route_slug
