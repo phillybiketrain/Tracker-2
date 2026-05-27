@@ -60,8 +60,11 @@
               {liveNavText}
             </a>
           {/if}
-          <a href="/go" class="px-4 py-2 rounded-full text-sm font-semibold text-white bg-primary hover:bg-blue-700 transition-colors">
+          <a href="/go" class="px-4 py-2 rounded-full text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Lead a Ride
+          </a>
+          <a href="/create" class="px-4 py-2 rounded-full text-sm font-semibold text-white bg-primary hover:bg-blue-700 transition-colors">
+            Create a Ride
           </a>
         </div>
 
@@ -84,8 +87,8 @@
       <!-- Mobile menu -->
       {#if mobileMenuOpen}
         <div class="md:hidden pt-4 pb-2 space-y-2">
-          <a href="/go" class="block px-4 py-3 rounded-lg text-sm font-bold text-white bg-primary hover:bg-blue-700 transition-colors text-center">
-            Lead a Ride
+          <a href="/create" class="block px-4 py-3 rounded-lg text-sm font-bold text-white bg-primary hover:bg-blue-700 transition-colors text-center">
+            Create a Ride
           </a>
           <a href="/" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Home
@@ -95,6 +98,9 @@
           </a>
           <a href="/manage" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             My Routes
+          </a>
+          <a href="/go" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
+            Lead a Ride
           </a>
           <a href="/subscribe" class="block px-4 py-2 rounded-lg text-sm font-semibold text-warm-gray-900 hover:bg-warm-gray-100 transition-colors">
             Subscribe

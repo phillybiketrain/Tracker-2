@@ -421,6 +421,16 @@
     </p>
   {/if}
 
+  <!-- Create your own ride -->
+  <div class="mt-16 max-w-2xl mx-auto text-center bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl p-10 border border-white">
+    <h2 class="text-2xl font-bold text-warm-gray-900 mb-2">Don't see your commute?</h2>
+    <p class="text-warm-gray-600 mb-6">
+      Start your own bike train. It publishes to the Neighborhood Commons, shows up in the Fiber app,
+      and you lead it live with Go There.
+    </p>
+    <a href="/create" class="btn btn-primary inline-block">Create your own ride →</a>
+  </div>
+
 </div>
 
 <style>

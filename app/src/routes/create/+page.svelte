@@ -285,7 +285,7 @@
           <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 text-left max-w-2xl mx-auto">
             <strong>What's next?</strong>
             <ul class="mt-2 space-y-1 list-disc list-inside">
-              <li>The ride {createdMode === 'recurring' ? 'series' : ''} now shows up on the <a href="/" class="underline">home page</a> and anywhere else Go There rides are published.</li>
+              <li>The ride {createdMode === 'recurring' ? 'series' : ''} now shows up on the <a href="/" class="underline">home page</a>, in the <a href="https://joinfiber.app" target="_blank" rel="noopener" class="underline">Fiber app</a>, and across the <a href="https://neighborhood-commons.org" target="_blank" rel="noopener" class="underline">Neighborhood Commons</a>.</li>
               <li>
                 {#if createdMode === 'recurring'}
                   Your leader opens Go There before each ride, enters <span class="font-mono">{gothereCode}</span>, and broadcasts. Same code every time.
@@ -305,8 +305,63 @@
         <div class="mb-8">
           <h1 class="text-4xl font-bold mb-3 text-warm-gray-900">Create a Route</h1>
           <p class="text-warm-gray-600 text-lg">
-            Set up a new bike train route for your community
+            Set up a new bike train for your community — it takes a couple of minutes.
           </p>
+        </div>
+
+        <!-- Where your ride goes: Commons → Fiber → Go There -->
+        <div class="card mb-8 bg-gradient-to-br from-white to-warm-gray-50">
+          <h2 class="text-lg font-bold text-warm-gray-900 mb-1">Your ride won't just live here</h2>
+          <p class="text-sm text-warm-gray-600 mb-6 max-w-2xl leading-relaxed">
+            When you publish, your route joins the open
+            <a href="https://neighborhood-commons.org" target="_blank" rel="noopener" class="font-semibold hover:underline" style="color:#5A8A8F;">Neighborhood Commons</a>
+            — the shared map of community rides — so people find and follow it far beyond this site.
+          </p>
+
+          <div class="grid sm:grid-cols-3 gap-4">
+            <!-- Neighborhood Commons -->
+            <div class="flex flex-col gap-2 p-4 rounded-2xl bg-white border border-warm-gray-100">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#6FB3B8;">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-warm-gray-900 text-sm">Open to the Commons</h3>
+              <p class="text-xs text-warm-gray-600 leading-relaxed">
+                Published to the Neighborhood Commons the moment you create it — open for anyone to build on.
+              </p>
+            </div>
+
+            <!-- Fiber -->
+            <div class="flex flex-col gap-2 p-4 rounded-2xl bg-white border border-warm-gray-100">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#F0D060;">
+                <svg class="w-5 h-5" style="color:#1A1918;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-warm-gray-900 text-sm">Discovered in Fiber</h3>
+              <p class="text-xs text-warm-gray-600 leading-relaxed">
+                Riders browsing the
+                <a href="https://joinfiber.app" target="_blank" rel="noopener" class="font-semibold hover:underline" style="color:#B8860B;">Fiber</a>
+                app find your bike train and can follow along.
+              </p>
+            </div>
+
+            <!-- Go There -->
+            <div class="flex flex-col gap-2 p-4 rounded-2xl bg-white border border-warm-gray-100">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#D4FF3A;">
+                <svg class="w-5 h-5" style="color:#0A0A0B;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.111 16.404a5.5 5.5 0 010-7.778m7.778 0a5.5 5.5 0 010 7.778M5.282 19.232a9.5 9.5 0 010-13.464m13.436 0a9.5 9.5 0 010 13.464M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-warm-gray-900 text-sm">Led with Go There</h3>
+              <p class="text-xs text-warm-gray-600 leading-relaxed">
+                You'll get a 4-character code. Your leader enters it in
+                <a href="https://gothere.bike" target="_blank" rel="noopener" class="font-semibold hover:underline" style="color:#6B8E00;">Go There</a>
+                to broadcast live on ride day.
+              </p>
+            </div>
+          </div>
         </div>
 
         <!-- Step 1: Route Details -->
