@@ -305,7 +305,7 @@
         <div class="mb-8">
           <h1 class="text-4xl font-bold mb-3 text-warm-gray-900">Create a Route</h1>
           <p class="text-warm-gray-600 text-lg">
-            Set up a new bike train for your community — it takes a couple of minutes.
+            Set up a new bike train route. It can be a single ride or recurring.
           </p>
         </div>
 
@@ -315,7 +315,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p class="text-sm text-warm-gray-700 leading-relaxed">
-            When you publish a ride, the event details — name, route, and time — are public, and other ride apps may pick them up.
+            When you publish a ride, the event details (ride name, route, time, description) are public, and other local apps may pick them up, giving your ride more reach.
           </p>
         </div>
 
