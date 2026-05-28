@@ -200,7 +200,7 @@
 
 <!-- Create Your Own Ride Section -->
 <div class="bg-gradient-to-br from-primary/10 via-cream to-secondary/10">
-  <div class="container mx-auto px-6 py-20">
+  <div class="container mx-auto px-6 py-16">
     <div class="max-w-3xl mx-auto text-center">
       <p class="text-primary font-semibold mb-3">Lead the way</p>
       <h2 class="text-4xl md:text-5xl font-bold mb-6 text-gray-900">Start your own bike train</h2>
@@ -208,31 +208,6 @@
         Got a commute worth sharing? Map your route, pick a time, and publish it in a couple of
         minutes — free. We handle the live map and a leader code so anyone can ride along.
       </p>
-
-      <!-- Where your ride goes -->
-      <div class="grid sm:grid-cols-3 gap-4 mb-10 text-left">
-        <div class="flex items-center gap-3 p-4 rounded-2xl bg-white/70 border border-white">
-          <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#6FB3B8;"></span>
-          <div>
-            <div class="font-bold text-gray-900 text-sm">Neighborhood Commons</div>
-            <div class="text-xs text-gray-600">Published to the open map of rides</div>
-          </div>
-        </div>
-        <div class="flex items-center gap-3 p-4 rounded-2xl bg-white/70 border border-white">
-          <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#F0D060;"></span>
-          <div>
-            <div class="font-bold text-gray-900 text-sm">Fiber app</div>
-            <div class="text-xs text-gray-600">Riders discover and follow it live</div>
-          </div>
-        </div>
-        <div class="flex items-center gap-3 p-4 rounded-2xl bg-white/70 border border-white">
-          <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#D4FF3A;"></span>
-          <div>
-            <div class="font-bold text-gray-900 text-sm">Go There app</div>
-            <div class="text-xs text-gray-600">Lead it live with a 4-character code</div>
-          </div>
-        </div>
-      </div>
 
       <a href="/create" class="btn btn-primary text-lg px-10 py-4 inline-block">
         Create your own ride →
