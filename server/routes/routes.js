@@ -99,6 +99,12 @@ router.post('/', async (req, res) => {
     const startLocationName = first.address || data.name;
     const gpx = buildGpxFile(data.waypoints, data.name);
 
+    // Minted before the GoThere saga so we can hand it to GoThere as the
+    // preferred collaborator code. A route must have exactly one code:
+    // what the admin dashboard prints is what the Go There app accepts.
+    // Letting GoThere mint its own would silently create a second code.
+    const accessCode = await queryOne('SELECT generate_access_code() as code');
+
     // Common shape of what we need back from GoThere, regardless of branch.
     /** @type {{ slug: string, code: string }} */
     let gtResult;
@@ -123,7 +129,9 @@ router.post('/', async (req, res) => {
 
       await gothere.uploadSeriesRoute(gothereSeriesId, gpx);
       await gothere.publishSeries(gothereSeriesId);
-      const gtCode = await gothere.mintSeriesCollaboratorCode(gothereSeriesId);
+      const gtCode = await gothere.mintSeriesCollaboratorCode(gothereSeriesId, {
+        preferredCode: accessCode.code,
+      });
       gtResult = { slug: gtSeries.publicSlug, code: gtCode.code };
 
     } else {
@@ -144,14 +152,15 @@ router.post('/', async (req, res) => {
 
       await gothere.uploadRideRoute(gothereRideId, gpx);
       await gothere.publishRide(gothereRideId);
-      const gtCode = await gothere.mintRideCollaboratorCode(gothereRideId);
+      const gtCode = await gothere.mintRideCollaboratorCode(gothereRideId, {
+        preferredCode: accessCode.code,
+      });
       gtResult = { slug: gtRide.slug, code: gtCode.code };
     }
 
     // ── Local state ─────────────────────────────────────────────────────
-    // Legacy access_code is still used by the existing broadcast/manage UIs.
-    // Retired in Batch 6.
-    const accessCode = await queryOne('SELECT generate_access_code() as code');
+    // access_code is still used by the existing broadcast/manage UIs, and is
+    // now also the Go There collaborator code (pinned above).
     const previewImageUrl = generateRoutePreviewUrl(data.waypoints);
     const distanceMiles = calculateRouteDistance(data.waypoints);
 
