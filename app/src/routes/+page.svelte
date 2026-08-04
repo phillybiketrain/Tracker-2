@@ -164,9 +164,9 @@
 <div class="bg-amber-50 border-y border-amber-200">
   <div class="container mx-auto px-6 py-4 flex flex-col items-center justify-center gap-2 text-center">
     <span class="text-gray-600 text-sm">Thank you to this month's coffee sponsor!</span>
-    <a href="https://www.rebelandwolf.com/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-      <img src="/rebel_and_wolf_logo.jpg" alt="Rebel and Wolf" class="h-8 w-auto" />
-      <span class="font-semibold text-gray-800">Rebel &amp; Wolf</span>
+    <a href="https://higbeebikes.com/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+      <img src="/higbee_logo.png" alt="Higbee Bicycles" class="h-8 w-auto" />
+      <span class="font-semibold text-gray-800">Higbee Bicycles</span>
     </a>
   </div>
 </div>
